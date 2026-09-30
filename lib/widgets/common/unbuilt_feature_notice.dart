@@ -8,8 +8,7 @@ import '../../core/theme/app_typography.dart';
 ///
 /// Shipping a visible note is better than shipping a button that silently
 /// does nothing: during a review it is obvious what is finished and what is
-/// still in progress, and each notice names the work stream in
-/// `TEAM_TASKS.md` that owns it.
+/// still in progress, and each notice names the work stream that owns it.
 class UnbuiltFeatureNotice extends StatelessWidget {
   const UnbuiltFeatureNotice({
     super.key,

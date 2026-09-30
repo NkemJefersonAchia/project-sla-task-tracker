@@ -25,7 +25,7 @@ import 'widgets/settings_row.dart';
 ///
 /// The identity header, the personal SLA summary, the link to statistics and
 /// sign out all work. Editing the profile, the appearance setting and the
-/// about page are work stream C in `TEAM_TASKS.md`.
+/// about page are work stream C (see the README).
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key, required this.onDataChanged});
 
@@ -164,7 +164,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   label: 'Edit profile',
                   // TODO(team): open a form that edits the signed-in member's
                   // name, role and accent colour, then calls
-                  // MemberRepository.save(). Work stream C in TEAM_TASKS.md.
+                  // MemberRepository.save(). Work stream C.
                   onTap: null,
                   trailingNote: 'Not built yet',
                 ),
@@ -174,7 +174,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   // TODO(team): a light / dark / system selector wired to
                   // ThemeController.instance.setMode(). The controller and
                   // its persistence are already finished - this row only
-                  // needs the UI. Work stream C in TEAM_TASKS.md.
+                  // needs the UI. Work stream C.
                   onTap: null,
                   trailingNote: 'Follows system',
                 ),
@@ -182,7 +182,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   icon: Icons.info_outline_rounded,
                   label: 'About this app',
                   // TODO(team): a short page describing the SLA rules and the
-                  // team. Work stream C in TEAM_TASKS.md.
+                  // team. Work stream C.
                   onTap: null,
                   trailingNote: 'Not built yet',
                   isLast: true,

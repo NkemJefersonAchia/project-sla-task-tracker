@@ -13,7 +13,7 @@ import '../../widgets/dashboard/sla_breakdown_bar.dart';
 
 /// Project statistics.
 ///
-/// ## Status: scaffolded, not finished - work stream A in `TEAM_TASKS.md`
+/// ## Status: scaffolded, not finished - work stream A (see the README)
 ///
 /// The screen exists, is routable and already renders the two things that
 /// needed no new logic: the SLA split and the workflow counts. What is left
@@ -89,9 +89,9 @@ class TaskStatisticsScreen extends StatelessWidget {
           SectionHeader(title: 'Still to build'),
           const UnbuiltFeatureNotice(
             title: 'This screen is a scaffold',
-            message: 'Work stream A in TEAM_TASKS.md. The three analyses '
-                'below are the remaining work; the data they need is already '
-                'exposed by the repository and SlaService.',
+            message: 'Work stream A. The three analyses below are the '
+                'remaining work; the data they need is already exposed by '
+                'the repository and SlaService.',
           ),
           const SizedBox(height: AppSpacing.md),
           const _TodoCard(

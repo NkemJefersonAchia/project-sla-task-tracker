@@ -196,18 +196,47 @@ rule can be reused and unit tested. Highlights:
 ## What is not finished
 
 This is an ~80% build. Three work streams are deliberately left for the rest of
-the team — see [TEAM_TASKS.md](TEAM_TASKS.md). The app names them in the UI
-rather than hiding them behind buttons that silently do nothing.
+the team. The app names them in the UI rather than hiding them behind buttons
+that silently do nothing, and each one has a branch ready off `main`.
 
-| Stream | Area | Status |
-|--------|------|--------|
-| A | Task statistics screen | Scaffolded; three analyses outstanding |
-| B | Team member add / edit / delete | List works, CRUD missing |
-| C | Edit profile, appearance, about | Rows present and disabled |
+| Stream | Branch | Area | What is missing |
+|--------|--------|------|-----------------|
+| A | `feature/stats-analysis` | Task statistics | On-time delivery rate, workload by member, upcoming deadlines. `SlaService.summarise`, `Task.completedAt` and `TaskRepository.byAssignee` already expose everything they need. |
+| B | `feature/team-member-crud` | Team members | Add / edit / delete. `MemberRepository.save()` and `newId()` exist; `delete()` does not, because it first has to be decided what happens to the tasks that member owns. |
+| C | `feature/profile-settings` | Profile settings | Edit profile, appearance, about. `ThemeController` already loads, saves and applies the theme mode, so appearance only needs a selector wired to `setMode()`. |
+
+Remove the `UnbuiltFeatureNotice` from a screen as its stream lands.
+
+---
+
+## Conventions
+
+**Colours.** Never write a hex value in a screen. `AppColors.of(context)` gives
+the palette and resolves light/dark automatically. Anything that maps a domain
+value to a colour goes in `StatusColors`.
+
+**Spacing and text.** Use the `AppSpacing` and `AppTypography` scales. A gap
+that needs a value off the scale usually means the layout wants rethinking.
+
+**Where a widget lives.** Used by two or more screens → `lib/widgets/`. Used by
+exactly one → that screen's own `widgets/` folder.
+
+**Storage.** Everything goes through `StorageService`, and new keys go in
+`StorageKeys` so two features cannot collide on the same string.
+
+**Errors.** Wrap storage writes in `try`/`catch (StorageException)` and report
+through `AppFeedback.showError`. Destructive actions go through
+`AppFeedback.confirm` first.
+
+**State.** `setState` plus `widget.onDataChanged()` after anything that writes.
+Do not add a state-management package — the assignment asks for `setState`.
+
+**Before a pull request.** `flutter analyze` clean and `flutter test` passing.
+Add a test for anything with logic in it; the files in `test/` are the pattern.
 
 ---
 
 ## Team
 
-See [TEAM_TASKS.md](TEAM_TASKS.md) for branch names and the split of work, and
-[AI_USAGE.md](AI_USAGE.md) for the AI usage declaration.
+Work split and individual contributions are tracked in the group contribution
+tracker. [AI_USAGE.md](AI_USAGE.md) carries the AI usage declaration.

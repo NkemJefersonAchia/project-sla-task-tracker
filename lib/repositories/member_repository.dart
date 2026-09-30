@@ -57,7 +57,7 @@ class MemberRepository {
 
   // TODO(team): delete(String id) - removing a member must also decide what
   // happens to the tasks they own (unassign them, or block the delete).
-  // Owned by the Team Members work stream, see TEAM_TASKS.md.
+  // Owned by the Team Members work stream (see the README).
 
   String newId() => 'member_${DateTime.now().microsecondsSinceEpoch}';
 

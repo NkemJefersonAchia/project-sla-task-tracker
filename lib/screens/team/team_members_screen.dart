@@ -26,8 +26,8 @@ import '../../widgets/task/task_list_tile.dart';
 /// ## Status: partially implemented
 ///
 /// Listing members and drilling into their workload is done. Adding, editing
-/// and removing members is the next piece of work - see `TEAM_TASKS.md`,
-/// work stream B.
+/// and removing members is the next piece of work - work stream B in the
+/// README.
 class TeamMembersScreen extends StatefulWidget {
   const TeamMembersScreen({super.key, required this.onDataChanged});
 
@@ -102,9 +102,8 @@ class _TeamMembersScreenState extends State<TeamMembersScreen> {
           const UnbuiltFeatureNotice(
             title: 'Managing the roster is not built yet',
             message: 'Adding, editing and removing team members is work '
-                'stream B in TEAM_TASKS.md. The repository already exposes '
-                'save() and newId(); the screen and the form are what is '
-                'missing.',
+                'stream B. The repository already exposes save() and '
+                'newId(); the screen and the form are what is missing.',
           ),
         ],
       ),
