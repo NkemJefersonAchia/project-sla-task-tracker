@@ -41,8 +41,8 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
 
   late final TextEditingController _titleController;
   late final TextEditingController _descriptionController;
-  late final TextEditingController _categoryController;
 
+  String? _category;
   String? _assigneeId;
   DateTime? _dueDate;
   TaskPriority _priority = TaskPriority.medium;
@@ -63,9 +63,10 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
 
   bool get _isEditing => widget.taskId != null;
 
-  /// Quick-pick suggestions. The field stays free text - these only save
-  /// typing for the categories this team actually uses.
-  static const List<String> _categorySuggestions = [
+  /// The categories this team works in. A fixed list rather than free text:
+  /// it removes a whole validation path, it keeps the search results tidy,
+  /// and picking from six options is faster than typing on a phone.
+  static const List<String> _categories = [
     'UI/UX Design',
     'Mobile Development',
     'Backend Logic',
@@ -83,7 +84,10 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
     _titleController = TextEditingController(text: task?.title ?? '');
     _descriptionController =
         TextEditingController(text: task?.description ?? '');
-    _categoryController = TextEditingController(text: task?.category ?? '');
+
+    // An unrecognised stored category (e.g. one typed by an older build)
+    // resolves to null so the field shows its hint instead of a stale value.
+    _category = _categories.contains(task?.category) ? task!.category : null;
 
     if (task != null) {
       _assigneeId = task.assigneeId;
@@ -98,23 +102,15 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
       _dueDate = Task.dateOnly(DateTime.now().add(const Duration(days: 7)));
     }
 
-    // Any keystroke in any of the three text fields marks the form dirty.
-    for (final controller in [
-      _titleController,
-      _descriptionController,
-      _categoryController,
-    ]) {
+    // Any keystroke in either text field marks the form dirty.
+    for (final controller in [_titleController, _descriptionController]) {
       controller.addListener(_markDirty);
     }
   }
 
   @override
   void dispose() {
-    for (final controller in [
-      _titleController,
-      _descriptionController,
-      _categoryController,
-    ]) {
+    for (final controller in [_titleController, _descriptionController]) {
       controller
         ..removeListener(_markDirty)
         ..dispose();
@@ -177,7 +173,7 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
             id: TaskRepository.instance.newId(),
             title: _titleController.text.trim(),
             description: _descriptionController.text.trim(),
-            category: _categoryController.text.trim(),
+            category: _category ?? '',
             assigneeId: _assigneeId ?? '',
             dueDate: _dueDate!,
             priority: _priority,
@@ -189,7 +185,7 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
         : existing.copyWith(
             title: _titleController.text.trim(),
             description: _descriptionController.text.trim(),
-            category: _categoryController.text.trim(),
+            category: _category ?? '',
             assigneeId: _assigneeId ?? '',
             dueDate: _dueDate!,
             priority: _priority,
@@ -298,28 +294,24 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
               const SizedBox(height: AppSpacing.lg),
 
               _FieldLabel(label: 'Category', required: true),
-              TextFormField(
-                controller: _categoryController,
-                textCapitalization: TextCapitalization.words,
+              DropdownButtonFormField<String>(
+                initialValue: _category,
+                isExpanded: true,
                 decoration: const InputDecoration(
-                  hintText: 'e.g. Mobile Development',
+                  hintText: 'Pick a category',
                 ),
-                validator: Validators.category,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Wrap(
-                spacing: AppSpacing.sm,
-                runSpacing: AppSpacing.sm,
-                children: [
-                  for (final suggestion in _categorySuggestions)
-                    _SuggestionChip(
-                      label: suggestion,
-                      onTap: () {
-                        _categoryController.text = suggestion;
-                        setState(() => _isDirty = true);
-                      },
+                items: [
+                  for (final category in _categories)
+                    DropdownMenuItem(
+                      value: category,
+                      child: Text(category, style: AppTypography.caption),
                     ),
                 ],
+                onChanged: (value) => setState(() {
+                  _category = value;
+                  _isDirty = true;
+                }),
+                validator: Validators.category,
               ),
               const SizedBox(height: AppSpacing.xl),
 
@@ -597,38 +589,6 @@ class _PriorityOption extends StatelessWidget {
               fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SuggestionChip extends StatelessWidget {
-  const _SuggestionChip({required this.label, required this.onTap});
-
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = AppColors.of(context);
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadius.sm),
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm,
-          vertical: 5,
-        ),
-        decoration: BoxDecoration(
-          color: c.surfaceMuted,
-          borderRadius: BorderRadius.circular(AppRadius.sm),
-          border: Border.all(color: c.border),
-        ),
-        child: Text(
-          label,
-          style: AppTypography.badge.copyWith(color: c.textSecondary),
         ),
       ),
     );

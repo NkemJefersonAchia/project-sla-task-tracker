@@ -1,96 +1,48 @@
 import '../models/sla_status.dart';
 import '../models/task.dart';
-import '../models/task_priority.dart';
 import '../services/sla_service.dart';
-
-/// How the task list is ordered.
-enum TaskSort {
-  urgency('Most urgent'),
-  dueDateAsc('Deadline'),
-  recentlyUpdated('Recently updated'),
-  titleAsc('Title A-Z');
-
-  const TaskSort(this.label);
-
-  final String label;
-}
 
 /// A declarative description of what the task list should show.
 ///
-/// Keeping the filters in a value object - instead of half a dozen loose
-/// fields on the screen's State - means the screen holds exactly one piece of
-/// filter state, and `copyWith` makes each `setState` call a single readable
-/// line. It also lets [TaskQuery.apply] be unit tested with no widgets at all.
+/// Two controls, because two are enough: type to search, or tap an SLA chip.
+/// A priority/assignee/sort sheet was tried and cut - on a board this size it
+/// was three taps to reproduce what the urgency sort already does for free.
+///
+/// Keeping the filters in a value object - instead of loose fields on the
+/// screen's State - means the screen holds exactly one piece of filter state,
+/// and it lets [apply] be unit tested with no widgets at all.
 class TaskQuery {
-  const TaskQuery({
-    this.searchTerm = '',
-    this.slaFilter,
-    this.priorityFilter,
-    this.assigneeFilter,
-    this.sort = TaskSort.urgency,
-  });
+  const TaskQuery({this.searchTerm = '', this.slaFilter});
 
   /// Matched against the title, the category and the description.
   final String searchTerm;
 
   /// Null means "All".
   final SlaStatus? slaFilter;
-  final TaskPriority? priorityFilter;
-  final String? assigneeFilter;
 
-  final TaskSort sort;
-
-  /// True when anything other than the default sort is active - drives the
-  /// "clear filters" affordance and the dot on the filter button.
-  bool get hasActiveFilters =>
-      searchTerm.isNotEmpty ||
-      slaFilter != null ||
-      priorityFilter != null ||
-      assigneeFilter != null;
-
-  int get activeFilterCount => [
-        slaFilter,
-        priorityFilter,
-        assigneeFilter,
-      ].where((filter) => filter != null).length;
+  bool get hasActiveFilters => searchTerm.isNotEmpty || slaFilter != null;
 
   TaskQuery copyWith({
     String? searchTerm,
     SlaStatus? slaFilter,
-    TaskPriority? priorityFilter,
-    String? assigneeFilter,
-    TaskSort? sort,
     bool clearSla = false,
-    bool clearPriority = false,
-    bool clearAssignee = false,
   }) {
     return TaskQuery(
       searchTerm: searchTerm ?? this.searchTerm,
       slaFilter: clearSla ? null : (slaFilter ?? this.slaFilter),
-      priorityFilter:
-          clearPriority ? null : (priorityFilter ?? this.priorityFilter),
-      assigneeFilter:
-          clearAssignee ? null : (assigneeFilter ?? this.assigneeFilter),
-      sort: sort ?? this.sort,
     );
   }
 
-  /// Filters and sorts [tasks] according to this query.
+  /// Filters [tasks] and returns them most-urgent first.
   ///
-  /// [now] is threaded through to [SlaService] so the SLA filter and the
-  /// urgency sort both judge every task against the same "today".
+  /// [now] is threaded through to [SlaService] so the SLA filter and the sort
+  /// both judge every task against the same "today".
   List<Task> apply(List<Task> tasks, {DateTime? now}) {
     final reference = now ?? DateTime.now();
     final term = searchTerm.trim().toLowerCase();
 
     final filtered = tasks.where((task) {
       if (term.isNotEmpty && !_matchesSearch(task, term)) return false;
-      if (priorityFilter != null && task.priority != priorityFilter) {
-        return false;
-      }
-      if (assigneeFilter != null && task.assigneeId != assigneeFilter) {
-        return false;
-      }
       if (slaFilter != null &&
           SlaService.statusOf(task, now: reference) != slaFilter) {
         return false;
@@ -98,7 +50,7 @@ class TaskQuery {
       return true;
     }).toList();
 
-    filtered.sort((a, b) => _compare(a, b, reference));
+    filtered.sort((a, b) => _byUrgency(a, b, reference));
     return filtered;
   }
 
@@ -108,30 +60,17 @@ class TaskQuery {
         task.description.toLowerCase().contains(term);
   }
 
-  int _compare(Task a, Task b, DateTime now) {
-    switch (sort) {
-      case TaskSort.urgency:
-        // Overdue first, then At Risk, then On Track, with Completed last -
-        // the list should open on the work that actually needs a decision.
-        final bySla = _urgencyRank(a, now).compareTo(_urgencyRank(b, now));
-        if (bySla != 0) return bySla;
+  /// Overdue first, then At Risk, then On Track, with Completed last - the
+  /// list should open on the work that actually needs a decision. Ties break
+  /// on priority, then on the nearest deadline.
+  static int _byUrgency(Task a, Task b, DateTime now) {
+    final bySla = _urgencyRank(a, now).compareTo(_urgencyRank(b, now));
+    if (bySla != 0) return bySla;
 
-        // Within the same bucket, heavier priority wins...
-        final byPriority = b.priority.weight.compareTo(a.priority.weight);
-        if (byPriority != 0) return byPriority;
+    final byPriority = b.priority.weight.compareTo(a.priority.weight);
+    if (byPriority != 0) return byPriority;
 
-        // ...and finally the nearest deadline.
-        return a.dueDate.compareTo(b.dueDate);
-
-      case TaskSort.dueDateAsc:
-        return a.dueDate.compareTo(b.dueDate);
-
-      case TaskSort.recentlyUpdated:
-        return b.updatedAt.compareTo(a.updatedAt);
-
-      case TaskSort.titleAsc:
-        return a.title.toLowerCase().compareTo(b.title.toLowerCase());
-    }
+    return a.dueDate.compareTo(b.dueDate);
   }
 
   static int _urgencyRank(Task task, DateTime now) {

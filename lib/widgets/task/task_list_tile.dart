@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
-import '../../core/theme/status_colors.dart';
 import '../../core/utils/date_formatting.dart';
 import '../../models/sla_status.dart';
 import '../../models/task.dart';
@@ -14,6 +13,11 @@ import '../common/member_avatar.dart';
 import 'sla_badge.dart';
 
 /// One task as it appears in a list.
+///
+/// Two lines and one badge: the title with its SLA state, then who owns it and
+/// when it is due. Category and priority live on the detail screen - showing
+/// them here as well turned every row into five competing labels, and the
+/// question a list answers is "what needs me next", not "tell me everything".
 ///
 /// The widget is deliberately dumb: it receives the task, its assignee and
 /// some callbacks, and owns no state of its own. All the decisions - what the
@@ -116,22 +120,6 @@ class TaskListTile extends StatelessWidget {
                             ? c.red
                             : c.textSecondary,
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    if (task.category.isNotEmpty)
-                      ToneBadge(
-                        label: task.category,
-                        pair: ColorPair(c.textSecondary, c.surfaceMuted),
-                      ),
-                    ToneBadge(
-                      label: task.priority.label,
-                      pair: StatusColors.forPriority(context, task.priority),
                     ),
                   ],
                 ),

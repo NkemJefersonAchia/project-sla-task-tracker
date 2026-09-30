@@ -34,7 +34,7 @@ four SLA states are visible immediately.
 flutter test
 ```
 
-58 tests: the SLA rules, the list filtering and sorting, the form validators,
+57 tests: the SLA rules, the list search and ordering, the form validators,
 and a set of widget tests that drive the real app end to end (sign in, create
 a task, complete a task, open the detail screen, reload from storage).
 
@@ -75,6 +75,32 @@ Two decisions worth calling out:
   anybody editing it.
 - **Deadlines are whole days.** `Task.dateOnly` strips the time before
   comparing, so a task due today is not "overdue" at 00:01.
+
+---
+
+## Interface decisions
+
+The screens were deliberately cut back after the first working version. What
+was removed, and why:
+
+- **The task row shows a title, an SLA badge, the owner and the deadline.**
+  Category and priority moved to the detail screen. Five labels per row meant
+  nothing stood out; a list answers "what needs me next", not "tell me
+  everything".
+- **The dashboard is four counters and the work that needs attention.** A
+  proportional SLA bar and a recent-activity feed were both cut - the bar
+  restated the counters, and the feed was information nobody acts on. The
+  counters are tappable shortcuts into the filtered list, so the dashboard
+  leads somewhere.
+- **The task list has two controls: search, and the SLA chips.** A
+  priority/assignee/sort sheet was built and then removed: on a board this
+  size it took three taps to reproduce what the default urgency ordering
+  already does for free.
+- **Three workflow statuses, not five.** A task is waiting, being worked on,
+  or finished. "In Review" and similar are a conversation, not a status field.
+- **Category is a dropdown of six options,** replacing a free-text field plus
+  a row of suggestion chips. One control instead of seven, one less validation
+  path, and the search results stay tidy.
 
 ---
 

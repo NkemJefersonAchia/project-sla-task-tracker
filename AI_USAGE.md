@@ -50,7 +50,7 @@ four genuine defects that were found and fixed before anything was committed:
 Verification performed:
 
 - `flutter analyze` — clean, no warnings.
-- `flutter test` — 58 tests passing, including widget tests that drive the real
+- `flutter test` — 57 tests passing, including widget tests that drive the real
   app: sign in, create a task, complete a task, open the detail screen and
   reload from storage.
 - `flutter build apk --debug` — builds.

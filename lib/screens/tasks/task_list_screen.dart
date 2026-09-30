@@ -15,9 +15,9 @@ import '../../widgets/common/app_buttons.dart';
 import '../../widgets/common/app_feedback.dart';
 import '../../widgets/common/empty_state.dart';
 import '../../widgets/task/task_list_tile.dart';
-import 'widgets/task_filter_sheet.dart';
 
-/// The full task list: search, filter, sort, and complete tasks in place.
+/// The full task list: search, filter by SLA state, and complete tasks in
+/// place.
 ///
 /// The screen holds exactly one piece of state - a [TaskQuery] - and derives
 /// everything it shows from it. That is why the filter logic could be moved
@@ -55,11 +55,6 @@ class TaskListScreenState extends State<TaskListScreen> {
 
   void _setSearchTerm(String value) {
     setState(() => _query = _query.copyWith(searchTerm: value));
-  }
-
-  Future<void> _openFilterSheet() async {
-    final result = await TaskFilterSheet.show(context, _query);
-    if (result != null) setState(() => _query = result);
   }
 
   Future<void> _openTask(String taskId) async {
@@ -151,8 +146,6 @@ class TaskListScreenState extends State<TaskListScreen> {
               _searchController.clear();
               _setSearchTerm('');
             },
-            onFilterTap: _openFilterSheet,
-            activeFilterCount: _query.activeFilterCount,
           ),
           _SlaFilterBar(
             selected: _query.slaFilter,
@@ -209,7 +202,7 @@ class TaskListScreenState extends State<TaskListScreen> {
             expand: false,
             onPressed: () {
               _searchController.clear();
-              setState(() => _query = TaskQuery(sort: _query.sort));
+              setState(() => _query = const TaskQuery());
             },
           ),
         ),
@@ -277,102 +270,35 @@ class _SearchBar extends StatelessWidget {
     required this.controller,
     required this.onChanged,
     required this.onClear,
-    required this.onFilterTap,
-    required this.activeFilterCount,
   });
 
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
   final VoidCallback onClear;
-  final VoidCallback onFilterTap;
-  final int activeFilterCount;
 
   @override
   Widget build(BuildContext context) {
-
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.screenPadding,
       ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: controller,
-              onChanged: onChanged,
-              textInputAction: TextInputAction.search,
-              decoration: InputDecoration(
-                hintText: 'Search title, category or description',
-                prefixIcon: const Icon(Icons.search_rounded, size: 18),
-                isDense: true,
-                // The clear button only exists while there is something to
-                // clear, so the field is not permanently cluttered.
-                suffixIcon: controller.text.isEmpty
-                    ? null
-                    : IconButton(
-                        icon: const Icon(Icons.close_rounded, size: 16),
-                        tooltip: 'Clear search',
-                        onPressed: onClear,
-                      ),
-              ),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          _FilterButton(
-            onTap: onFilterTap,
-            activeCount: activeFilterCount,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FilterButton extends StatelessWidget {
-  const _FilterButton({required this.onTap, required this.activeCount});
-
-  final VoidCallback onTap;
-  final int activeCount;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = AppColors.of(context);
-    final active = activeCount > 0;
-
-    return Material(
-      color: active ? c.blueBg : c.surfaceMuted,
-      borderRadius: BorderRadius.circular(AppRadius.md),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        child: Container(
-          height: 44,
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppRadius.md),
-            border: Border.all(color: active ? c.blue : c.border),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.tune_rounded,
-                size: 17,
-                color: active ? c.blue : c.textSecondary,
-              ),
-              if (active) ...[
-                const SizedBox(width: 5),
-                Text(
-                  '$activeCount',
-                  style: AppTypography.badge.copyWith(
-                    color: c.blue,
-                    fontWeight: FontWeight.w600,
-                  ),
+      child: TextField(
+        controller: controller,
+        onChanged: onChanged,
+        textInputAction: TextInputAction.search,
+        decoration: InputDecoration(
+          hintText: 'Search tasks',
+          prefixIcon: const Icon(Icons.search_rounded, size: 18),
+          isDense: true,
+          // The clear button only exists while there is something to clear,
+          // so the field is not permanently cluttered.
+          suffixIcon: controller.text.isEmpty
+              ? null
+              : IconButton(
+                  icon: const Icon(Icons.close_rounded, size: 16),
+                  tooltip: 'Clear search',
+                  onPressed: onClear,
                 ),
-              ],
-            ],
-          ),
         ),
       ),
     );

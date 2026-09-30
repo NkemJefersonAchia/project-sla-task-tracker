@@ -190,7 +190,9 @@ void main() {
       find.byType(TextFormField).first,
       'Rehearse the walkthrough',
     );
-    // Category is required; the suggestion chips fill it in one tap.
+    // Category is required and comes from a dropdown.
+    await tester.tap(find.byType(DropdownButtonFormField<String>).first);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Documentation').last);
     await tester.pumpAndSettle();
 
@@ -284,14 +286,14 @@ void main() {
     // Prove persistence without restarting the process: write, drop the
     // in-memory cache, then load again from the same mock store.
     final task = TaskRepository.instance.all.first;
-    await TaskRepository.instance.updateStatus(task.id, TaskStatus.inReview);
+    await TaskRepository.instance.updateStatus(task.id, TaskStatus.inProgress);
 
     TaskRepository.instance.resetForTesting();
     await TaskRepository.instance.load();
 
     expect(
       TaskRepository.instance.byId(task.id)!.status,
-      TaskStatus.inReview,
+      TaskStatus.inProgress,
     );
   });
 }

@@ -71,8 +71,6 @@ abstract final class StatusColors {
         return ColorPair(c.gray, c.grayBg);
       case TaskStatus.inProgress:
         return ColorPair(c.blue, c.blueBg);
-      case TaskStatus.inReview:
-        return ColorPair(c.purple, c.purpleBg);
       case TaskStatus.done:
         return ColorPair(c.green, c.greenBg);
     }

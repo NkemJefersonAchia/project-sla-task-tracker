@@ -106,7 +106,7 @@ abstract final class SeedData {
         assigneeId: 'member_1',
         dueInDays: -3,
         priority: TaskPriority.urgent,
-        status: TaskStatus.inReview,
+        status: TaskStatus.inProgress,
         createdDaysAgo: 14,
       ),
       make(

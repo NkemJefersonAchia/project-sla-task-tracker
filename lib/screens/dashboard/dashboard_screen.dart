@@ -7,24 +7,23 @@ import '../../core/theme/app_typography.dart';
 import '../../core/theme/status_colors.dart';
 import '../../core/utils/date_formatting.dart';
 import '../../models/sla_status.dart';
-import '../../models/task.dart';
 import '../../repositories/member_repository.dart';
 import '../../repositories/session_repository.dart';
 import '../../repositories/task_repository.dart';
 import '../../services/sla_service.dart';
 import '../../widgets/common/app_card.dart';
-import '../../widgets/common/empty_state.dart';
 import '../../widgets/common/member_avatar.dart';
 import '../../widgets/common/section_header.dart';
 import '../../widgets/dashboard/metric_tile.dart';
-import '../../widgets/dashboard/sla_breakdown_bar.dart';
 import '../../widgets/task/task_list_tile.dart';
 
 /// The project dashboard - the first screen after signing in.
 ///
-/// It answers three questions in order: how is the project doing overall,
-/// what needs a decision today, and what changed recently. Everything on it
-/// is derived from the task list; the dashboard stores nothing of its own.
+/// It answers two questions, in this order: how is the project doing, and what
+/// needs a decision today. Nothing else. The counters double as shortcuts into
+/// the task list, so the dashboard is a way in to the work rather than a wall
+/// of summaries. Everything on it is derived from the task list; the dashboard
+/// stores nothing of its own.
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({
     super.key,
@@ -88,9 +87,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         .toList()
       ..sort((a, b) => a.dueDate.compareTo(b.dueDate));
 
-    final recentlyUpdated = [...tasks]
-      ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-
     return Scaffold(
       backgroundColor: c.canvas,
       floatingActionButton: FloatingActionButton(
@@ -133,22 +129,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             _MetricGrid(counts: counts, onOpenTasks: widget.onOpenTasks),
             const SizedBox(height: AppSpacing.xl),
             SectionHeader(
-              title: 'Task overview',
-              action: SectionAction(
-                label: 'Statistics',
-                icon: Icons.arrow_forward_rounded,
-                onPressed: () =>
-                    Navigator.of(context).pushNamed(AppRoutes.statistics),
-              ),
-            ),
-            AppCard(
-              child: SlaBreakdownBar(
-                counts: counts,
-                onSegmentTap: widget.onOpenTasks,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            SectionHeader(
               title: 'Needs attention (${needsAttention.length})',
               action: needsAttention.length > _previewCount
                   ? SectionAction(
@@ -185,35 +165,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onTap: () => _openTask(task.id),
                   ),
                 ),
-            const SizedBox(height: AppSpacing.xl),
-            SectionHeader(title: 'Recent activity'),
-            if (recentlyUpdated.isEmpty)
-              EmptyState(
-                icon: Icons.inbox_outlined,
-                title: 'No tasks yet',
-                message: 'Create the first task to start tracking the project.',
-              )
-            else
-              AppCard(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md,
-                  vertical: AppSpacing.xs,
-                ),
-                child: Column(
-                  children: [
-                    for (final task
-                        in recentlyUpdated.take(_previewCount).toList())
-                      _ActivityRow(
-                        task: task,
-                        isLast: task == recentlyUpdated
-                            .take(_previewCount)
-                            .toList()
-                            .last,
-                        onTap: () => _openTask(task.id),
-                      ),
-                  ],
-                ),
-              ),
           ],
         ),
       ),
@@ -343,73 +294,6 @@ class _MetricRow extends StatelessWidget {
           const SizedBox(width: AppSpacing.md),
           Expanded(child: right),
         ],
-      ),
-    );
-  }
-}
-
-/// A compact "X was updated N hours ago" row.
-class _ActivityRow extends StatelessWidget {
-  const _ActivityRow({
-    required this.task,
-    required this.isLast,
-    required this.onTap,
-  });
-
-  final Task task;
-  final bool isLast;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = AppColors.of(context);
-    final assignee = MemberRepository.instance.byId(task.assigneeId);
-
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-        decoration: BoxDecoration(
-          border: isLast
-              ? null
-              : Border(bottom: BorderSide(color: c.border)),
-        ),
-        child: Row(
-          children: [
-            MemberAvatar(member: assignee, size: 26),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    task.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTypography.caption.copyWith(
-                      color: c.textPrimary,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  Text(
-                    '${assignee?.name.split(' ').first ?? 'Someone'} · '
-                    '${task.status.label}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTypography.caption.copyWith(
-                      color: c.textTertiary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Text(
-              DateFormatting.timeAgo(task.updatedAt),
-              style: AppTypography.caption.copyWith(color: c.textTertiary),
-            ),
-          ],
-        ),
       ),
     );
   }

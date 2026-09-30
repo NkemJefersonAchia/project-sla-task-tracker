@@ -5,11 +5,11 @@ import 'package:project_sla_task_tracker/models/task_priority.dart';
 import 'package:project_sla_task_tracker/models/task_status.dart';
 import 'package:project_sla_task_tracker/services/task_query.dart';
 
-/// Tests for the task list's filtering and sorting.
+/// Tests for the task list's searching, filtering and ordering.
 ///
 /// Because the logic lives in a plain value object rather than inside the
-/// screen's State, the whole search + filter + sort behaviour can be checked
-/// without building a single widget.
+/// screen's State, the whole behaviour can be checked without building a
+/// single widget.
 void main() {
   final now = DateTime(2026, 6, 10);
 
@@ -22,7 +22,6 @@ void main() {
     int dueInDays = 10,
     TaskPriority priority = TaskPriority.medium,
     TaskStatus status = TaskStatus.inProgress,
-    int updatedDaysAgo = 0,
   }) {
     return Task(
       id: id,
@@ -34,7 +33,7 @@ void main() {
       priority: priority,
       status: status,
       createdAt: now.subtract(const Duration(days: 30)),
-      updatedAt: now.subtract(Duration(days: updatedDaysAgo)),
+      updatedAt: now,
     );
   }
 
@@ -46,7 +45,6 @@ void main() {
       category: 'Mobile',
       dueInDays: -3,
       priority: TaskPriority.high,
-      updatedDaysAgo: 2,
     ),
     task(
       id: '3',
@@ -55,7 +53,6 @@ void main() {
       description: 'Covers the login flow end to end',
       assigneeId: 'member_2',
       dueInDays: 1,
-      updatedDaysAgo: 5,
     ),
     task(
       id: '4',
@@ -64,7 +61,6 @@ void main() {
       assigneeId: 'member_2',
       dueInDays: -8,
       status: TaskStatus.done,
-      updatedDaysAgo: 1,
     ),
   ];
 
@@ -98,73 +94,79 @@ void main() {
     });
   });
 
-  group('filters', () {
-    test('filtering by SLA state uses the live evaluation', () {
+  group('SLA filter', () {
+    test('uses the live evaluation rather than a stored value', () {
       final result = const TaskQuery(slaFilter: SlaStatus.overdue)
           .apply(tasks, now: now);
 
       expect(result.single.id, '2');
     });
 
-    test('filtering by assignee', () {
-      final result =
-          const TaskQuery(assigneeFilter: 'member_2').apply(tasks, now: now);
-
-      expect(result.map((t) => t.id), ['3', '4']);
-    });
-
-    test('filters combine as AND, not OR', () {
-      final result = const TaskQuery(
-        assigneeFilter: 'member_2',
-        slaFilter: SlaStatus.completed,
-      ).apply(tasks, now: now);
+    test('completed work can be isolated', () {
+      final result = const TaskQuery(slaFilter: SlaStatus.completed)
+          .apply(tasks, now: now);
 
       expect(result.single.id, '4');
     });
+
+    test('search and the SLA filter combine as AND, not OR', () {
+      final result = const TaskQuery(
+        searchTerm: 'accessibility',
+        slaFilter: SlaStatus.overdue,
+      ).apply(tasks, now: now);
+
+      // Task 4 matches the search but is Completed, not Overdue.
+      expect(result, isEmpty);
+    });
   });
 
-  group('sorting', () {
-    test('urgency puts overdue first and completed last', () {
+  group('ordering', () {
+    test('overdue leads and completed sinks to the end', () {
       final result = const TaskQuery().apply(tasks, now: now);
 
-      expect(result.first.id, '2', reason: 'the overdue task leads');
-      expect(result.last.id, '4', reason: 'completed work sinks to the end');
+      expect(result.first.id, '2');
+      expect(result.last.id, '4');
     });
 
-    test('deadline sort is strictly by date', () {
-      final result =
-          const TaskQuery(sort: TaskSort.dueDateAsc).apply(tasks, now: now);
+    test('within one SLA bucket, higher priority wins', () {
+      final sameBucket = [
+        task(id: 'low', title: 'Low', dueInDays: 30, priority: TaskPriority.low),
+        task(
+          id: 'urgent',
+          title: 'Urgent',
+          dueInDays: 30,
+          priority: TaskPriority.urgent,
+        ),
+      ];
 
-      expect(result.map((t) => t.id), ['4', '2', '3', '1']);
+      final result = const TaskQuery().apply(sameBucket, now: now);
+
+      expect(result.first.id, 'urgent');
     });
 
-    test('recently updated sort is newest first', () {
-      final result = const TaskQuery(sort: TaskSort.recentlyUpdated)
-          .apply(tasks, now: now);
+    test('equal priority falls back to the nearest deadline', () {
+      final sameBucket = [
+        task(id: 'far', title: 'Far', dueInDays: 40),
+        task(id: 'near', title: 'Near', dueInDays: 20),
+      ];
 
-      expect(result.first.id, '1');
-      expect(result.last.id, '3');
-    });
+      final result = const TaskQuery().apply(sameBucket, now: now);
 
-    test('title sort ignores case', () {
-      final result =
-          const TaskQuery(sort: TaskSort.titleAsc).apply(tasks, now: now);
-
-      expect(result.first.title, 'Accessibility review');
+      expect(result.first.id, 'near');
     });
   });
 
   group('active filter reporting', () {
-    test('a default query reports no active filters', () {
+    test('a default query reports nothing active', () {
       expect(const TaskQuery().hasActiveFilters, isFalse);
-      expect(const TaskQuery().activeFilterCount, 0);
     });
 
-    test('the search term counts as active but not as a filter chip', () {
-      const query = TaskQuery(searchTerm: 'login');
-
-      expect(query.hasActiveFilters, isTrue);
-      expect(query.activeFilterCount, 0);
+    test('either control counts as active', () {
+      expect(const TaskQuery(searchTerm: 'login').hasActiveFilters, isTrue);
+      expect(
+        const TaskQuery(slaFilter: SlaStatus.atRisk).hasActiveFilters,
+        isTrue,
+      );
     });
 
     test('copyWith can clear a filter that copyWith cannot null out', () {
@@ -176,7 +178,7 @@ void main() {
 
   test('applying a query never mutates the source list', () {
     final source = [...tasks];
-    const TaskQuery(sort: TaskSort.titleAsc).apply(source, now: now);
+    const TaskQuery(searchTerm: 'e').apply(source, now: now);
 
     expect(source.map((t) => t.id), ['1', '2', '3', '4']);
   });
