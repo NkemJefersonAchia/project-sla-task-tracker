@@ -10,30 +10,54 @@ import 'services/storage_service.dart';
 /// Application entry point.
 ///
 /// Local storage is opened and every repository is filled *before* the first
-/// frame. That is a deliberate trade: a few milliseconds of extra start-up
-/// time buys us screens that read their data synchronously, so no list in the
-/// app has to render a spinner or an empty flash on the way in.
+/// frame. That is a deliberate trade: a few milliseconds of start-up time buys
+/// screens that can read their data synchronously, so no tab has to render a
+/// spinner or flash an empty list on the way in.
+///
+/// What that means for you: inside your `build` method,
+/// `TaskRepository.instance.all` is just there. No `FutureBuilder`, no
+/// `async`. Read it straight.
 Future<void> main() async {
-  // Required before touching any plugin (SharedPreferences) ahead of runApp.
+  // Required before touching any plugin - SharedPreferences, here - ahead of
+  // runApp.
   WidgetsFlutterBinding.ensureInitialized();
 
   try {
     await StorageService.instance.init();
     await ThemeController.instance.load();
 
-    // Members load first: the session resolves a member id into a person, and
-    // tasks are displayed with their assignee's name.
+    // Members load first: the session turns a stored member id back into a
+    // person, and tasks are displayed with their assignee's name.
     await MemberRepository.instance.load();
     await TaskRepository.instance.load();
     await SessionRepository.instance.load();
+
+    await _signInDefaultUserUntilWelcomeScreenExists();
   } catch (error) {
-    // If storage cannot be opened at all there is no app to show, so we fail
-    // with a readable screen instead of a blank one.
+    // If storage cannot be opened there is no app to show, so fail with a
+    // readable screen rather than a blank one.
     runApp(_StartupFailureApp(error: error));
     return;
   }
 
   runApp(const TaskTrackerApp());
+}
+
+/// Temporary: picks the first team member so the app always has a current
+/// user.
+///
+/// The Profile tab needs to know who "you" are, and until the welcome screen
+/// exists there is nothing to ask. This keeps the other three tabs unblocked.
+///
+/// **Delete this whole function** when the welcome / sign-in screen lands -
+/// choosing the user is that screen's entire job.
+Future<void> _signInDefaultUserUntilWelcomeScreenExists() async {
+  if (SessionRepository.instance.isSignedIn) return;
+
+  final members = MemberRepository.instance.all;
+  if (members.isEmpty) return;
+
+  await SessionRepository.instance.signIn(members.first);
 }
 
 /// Last-resort screen shown when start-up itself fails.
