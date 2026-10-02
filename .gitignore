@@ -49,3 +49,4 @@ app.*.map.json
 
 # Local build outputs
 /build/
+devtools_options.yaml
