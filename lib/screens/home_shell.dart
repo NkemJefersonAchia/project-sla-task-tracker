@@ -3,29 +3,31 @@ import 'package:flutter/material.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_spacing.dart';
 import '../core/theme/app_typography.dart';
-import '../models/sla_status.dart';
-import 'dashboard/dashboard_screen.dart';
+import 'home/home_screen.dart';
 import 'profile/profile_screen.dart';
-import 'tasks/task_list_screen.dart';
-import 'team/team_members_screen.dart';
+import 'tasks/tasks_screen.dart';
+import 'team/team_screen.dart';
 
-/// The signed-in container: four destinations behind one bottom bar.
+/// The container that holds the four tabs behind one bottom bar.
+///
+/// ## Shared file - change it as little as you can
+///
+/// Everyone's tab is wired up here, so this is the one file all four of you
+/// touch. Swapping your placeholder for your real screen is a one-line change;
+/// keep it to that line and the four of you will never conflict here.
 ///
 /// ## Why an IndexedStack
 ///
-/// All four tabs are built once and kept alive, so switching back to the task
-/// list restores its scroll position and its filters instead of rebuilding it
-/// from scratch. A `PageView` would animate between them but would also
-/// dispose off-screen tabs; for a four-item bottom bar, keeping state is the
-/// behaviour users expect.
+/// All four tabs are built once and kept alive, so switching away from a tab
+/// and back restores its scroll position and anything the user had typed. A
+/// `PageView` would animate between them but would throw that state away.
 ///
-/// ## How the tabs stay in sync
-///
-/// The repositories hold the data in memory, so every tab reads the same list
-/// synchronously inside `build`. When a tab changes something it calls
-/// [_handleDataChanged], the shell rebuilds, and all four tabs re-read - which
-/// is why completing a task in the list immediately moves the dashboard
-/// counters.
+/// Two consequences worth knowing, because they have caught people out:
+///  * Every tab is alive at the same time, so if two tabs each have a
+///    `FloatingActionButton` they need different `heroTag` values or the app
+///    crashes the moment you push a route.
+///  * A tab rebuilds whenever the shell rebuilds. If your screen reads from a
+///    repository inside `build`, it stays current for free.
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
 
@@ -36,46 +38,25 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   int _currentIndex = 0;
 
-  /// Lets the dashboard reach into the already-built task list and apply a
-  /// filter to it - tapping the "Overdue" tile jumps to the list showing only
-  /// overdue work. A key is the simplest way to call a method on a sibling's
-  /// State without introducing a state-management package.
-  final _taskListKey = GlobalKey<TaskListScreenState>();
-
-  void _handleDataChanged() {
-    if (!mounted) return;
-    setState(() {});
-  }
-
-  /// Switches to the task list and filters it to [status] in one step.
-  void _openTasksFiltered(SlaStatus? status) {
-    setState(() => _currentIndex = 1);
-    // The list may not exist yet on the very first switch, so the filter is
-    // applied after this frame, once the tab has been built.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _taskListKey.currentState?.applySlaFilter(status);
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
-    final destinations = <_Destination>[
-      const _Destination(
+    const destinations = <_Destination>[
+      _Destination(
         icon: Icons.dashboard_outlined,
         activeIcon: Icons.dashboard_rounded,
         label: 'Home',
       ),
-      const _Destination(
+      _Destination(
         icon: Icons.check_circle_outline_rounded,
         activeIcon: Icons.check_circle_rounded,
         label: 'Tasks',
       ),
-      const _Destination(
+      _Destination(
         icon: Icons.people_outline_rounded,
         activeIcon: Icons.people_rounded,
         label: 'Team',
       ),
-      const _Destination(
+      _Destination(
         icon: Icons.person_outline_rounded,
         activeIcon: Icons.person_rounded,
         label: 'Profile',
@@ -83,23 +64,16 @@ class _HomeShellState extends State<HomeShell> {
     ];
 
     return Scaffold(
-      body: SafeArea(
-        bottom: false,
-        child: IndexedStack(
-          index: _currentIndex,
-          children: [
-            DashboardScreen(
-              onDataChanged: _handleDataChanged,
-              onOpenTasks: _openTasksFiltered,
-            ),
-            TaskListScreen(
-              key: _taskListKey,
-              onDataChanged: _handleDataChanged,
-            ),
-            TeamMembersScreen(onDataChanged: _handleDataChanged),
-            ProfileScreen(onDataChanged: _handleDataChanged),
-          ],
-        ),
+      body: IndexedStack(
+        index: _currentIndex,
+        // Replace your own line here with your real screen, and leave the
+        // other three alone.
+        children: const [
+          HomeScreen(),
+          TasksScreen(),
+          TeamScreen(),
+          ProfileScreen(),
+        ],
       ),
       bottomNavigationBar: _BottomBar(
         destinations: destinations,
@@ -124,10 +98,9 @@ class _Destination {
 
 /// A hand-rolled bottom bar.
 ///
-/// Material's own `NavigationBar` carries a tinted pill behind the active
-/// item and a tall default height, which fights the flat, hairline-and-text
-/// look of the rest of the app. Building the row ourselves is a dozen lines
-/// and keeps the navigation visually part of the same product.
+/// Material's own `NavigationBar` puts a tinted pill behind the active item
+/// and stands quite tall, which fights the flat, hairline-and-text look the
+/// rest of the app is going for. Building the row ourselves is a dozen lines.
 class _BottomBar extends StatelessWidget {
   const _BottomBar({
     required this.destinations,

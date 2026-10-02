@@ -9,6 +9,16 @@ Built for the Mobile Application Development formative assignment.
 
 ---
 
+## Status: the foundation is built, the screens are not
+
+The data layer, the SLA engine, local storage and the design system are
+finished and tested. **Every screen is empty.** Each one is owned by a team
+member and built from scratch — see [Who builds what](#who-builds-what).
+
+Open the app and each tab tells you what it is supposed to become.
+
+---
+
 ## Running it
 
 ```bash
@@ -16,95 +26,123 @@ flutter pub get
 flutter run
 ```
 
-The app targets Android and iOS. It must be run on an emulator or a physical
-device — the assignment does not accept a browser build.
+Android and iOS. It must run on an emulator or a real device — a browser build
+is not accepted for this assignment.
 
 ```bash
-flutter emulators --launch Pixel_8   # or open a simulator
+flutter emulators --launch Pixel_8
 flutter run
 ```
 
-First launch seeds four team members and eight tasks so the dashboard has
-something to show. The deadlines are relative to the day you open it, so all
-four SLA states are visible immediately.
-
-### Tests
+First launch seeds four team members and eight tasks, with deadlines relative
+to the day you open it, so all four SLA states are visible straight away.
 
 ```bash
-flutter test
+flutter analyze   # must be clean before you push
+flutter test      # 46 tests, must pass before you push
 ```
-
-57 tests: the SLA rules, the list search and ordering, the form validators,
-and a set of widget tests that drive the real app end to end (sign in, create
-a task, complete a task, open the detail screen, reload from storage).
 
 ---
 
-## The SLA rules
+## Who builds what
 
-Implemented in [`lib/services/sla_service.dart`](lib/services/sla_service.dart)
-and covered by [`test/sla_service_test.dart`](test/sla_service_test.dart).
-Evaluated in this order — the first rule that matches wins.
+Five areas, one branch each. Everything in `lib/core`, `lib/models`,
+`lib/services`, `lib/repositories` and `lib/widgets/common` is shared — use it,
+don't rewrite it.
+
+| Area | Branch | Folder |
+|------|--------|--------|
+| Welcome / sign-in | `feature/welcome-login` | `lib/screens/welcome/` *(create it)* |
+| Home | `feature/home-tab` | `lib/screens/home/` |
+| Tasks | `feature/tasks-tab` | `lib/screens/tasks/` |
+| Team | `feature/team-tab` | `lib/screens/team/` |
+| Profile | `feature/profile-tab` | `lib/screens/profile/` |
+
+Each screen file starts with a doc comment describing exactly what to build.
+The full brief lives in the handover document.
+
+---
+
+## What already works
+
+### The SLA engine — `lib/services/sla_service.dart`
+
+Call `SlaService.evaluate(task)` and you get back the status, the days
+remaining, and a sentence explaining the verdict that you can put straight on
+screen. `SlaService.summarise(tasks)` counts a list into the four buckets.
+
+The rules, in order — the first one that matches wins:
 
 | # | Rule | Result |
 |---|------|--------|
-| 1 | The task is marked **Done** | **Completed** |
-| 2 | The deadline has passed and the task is not done | **Overdue** |
-| 3 | The deadline is inside the priority's warning window | **At Risk** |
-| 4 | The task is still **To Do** and the deadline is ≤ 3 days away | **At Risk** |
+| 1 | Marked **Done** | **Completed** |
+| 2 | Deadline passed, not done | **Overdue** |
+| 3 | Deadline inside the priority's warning window | **At Risk** |
+| 4 | Still **To Do** and the deadline is ≤ 3 days away | **At Risk** |
 | 5 | Anything else | **On Track** |
 
-The warning window in rule 3 depends on priority, because important work needs
-more notice to recover:
+Rule 3's window widens with priority, because important work needs more notice
+to recover: Urgent 4 days, High 3, Medium 2, Low 1.
 
-| Priority | Flagged this many days before the deadline |
-|----------|--------------------------------------------|
-| Urgent   | 4 |
-| High     | 3 |
-| Medium   | 2 |
-| Low      | 1 |
+Rule 4 exists because a deadline that looks comfortable isn't, if nobody has
+started. A low-priority task due in 3 days passes rule 3 — but if it is still
+sitting in *To Do*, it gets flagged.
 
-Rule 4 exists because a deadline that still looks comfortable is not
-comfortable if nobody has started the work. A low-priority task due in 3 days
-would pass rule 3, but if it is still sitting in *To Do* it gets flagged.
+Two decisions to be able to explain:
 
-Two decisions worth calling out:
-
-- **The SLA is never stored.** It is recomputed from the deadline every time it
-  is displayed, so a task that was On Track yesterday is Overdue today without
-  anybody editing it.
+- **The SLA status is never stored.** It is recomputed every time it is shown,
+  so a task that was On Track yesterday is Overdue today without anyone
+  touching it.
 - **Deadlines are whole days.** `Task.dateOnly` strips the time before
-  comparing, so a task due today is not "overdue" at 00:01.
+  comparing, so a task due today isn't "overdue" at 00:01.
+
+### Data and storage
+
+`TaskRepository`, `MemberRepository` and `SessionRepository` hold everything in
+memory and mirror each write to disk. Read them **synchronously inside
+`build`** — no `FutureBuilder`, no `async`:
+
+```dart
+final tasks = TaskRepository.instance.all;
+final counts = SlaService.summarise(tasks);
+```
+
+Persistence is SharedPreferences holding two JSON documents. It was chosen over
+sqflite because both collections are always read in full and never queried
+relationally, so there is no schema and no migrations to maintain. Everything
+goes through `StorageService`, so changing that later is a one-file job.
+
+### The design system — `lib/core/theme/`
+
+Notion-inspired: a near-white canvas, 1px hairline borders, no drop shadows,
+muted accent colours used as a foreground/background pair, tight letter
+spacing. There is a full dark theme and it already works.
+
+```dart
+final c = AppColors.of(context);   // resolves light/dark for you
+```
+
+Never write a hex value in a screen. Never build a `TextStyle` inline — use
+`AppTypography`. Never invent a gap — use `AppSpacing`.
+
+### Shared widgets — `lib/widgets/`
+
+`AppCard`, `PrimaryButton`, `SecondaryButton`, `SlaBadge`, `ToneBadge`,
+`MemberAvatar`, `SectionHeader`, `PropertyRow`, `EmptyState`, `AppFeedback`
+(snack bars and confirm dialogs).
+
+Build your screen out of these. A widget only you use lives in your own
+`screens/<your-tab>/widgets/` folder; one that two tabs need moves up to
+`lib/widgets/common/` — tell the others when you move something there.
+
+### Validation — `lib/core/utils/validators.dart`
+
+Title, description, category, assignee, due date, email, password, person name.
+They follow Flutter's `FormFieldValidator` contract: `null` means valid.
 
 ---
 
-## Interface decisions
-
-The screens were deliberately cut back after the first working version. What
-was removed, and why:
-
-- **The task row shows a title, an SLA badge, the owner and the deadline.**
-  Category and priority moved to the detail screen. Five labels per row meant
-  nothing stood out; a list answers "what needs me next", not "tell me
-  everything".
-- **The dashboard is four counters and the work that needs attention.** A
-  proportional SLA bar and a recent-activity feed were both cut - the bar
-  restated the counters, and the feed was information nobody acts on. The
-  counters are tappable shortcuts into the filtered list, so the dashboard
-  leads somewhere.
-- **The task list has two controls: search, and the SLA chips.** A
-  priority/assignee/sort sheet was built and then removed: on a board this
-  size it took three taps to reproduce what the default urgency ordering
-  already does for free.
-- **Three workflow statuses, not five.** A task is waiting, being worked on,
-  or finished. "In Review" and similar are a conversation, not a status field.
-- **Category is a dropdown of six options,** replacing a free-text field plus
-  a row of suggestion chips. One control instead of seven, one less validation
-  path, and the search results stay tidy.
-
----
-
-## Architecture
+## Project layout
 
 ```
 lib/
@@ -112,7 +150,7 @@ lib/
 ├── app.dart                   MaterialApp, theme, initial route
 │
 ├── core/
-│   ├── constants/app_routes.dart   Route names + typed route arguments
+│   ├── constants/app_routes.dart   Route names
 │   ├── navigation/app_router.dart  onGenerateRoute table
 │   ├── theme/                      Colours, spacing, type, ThemeData
 │   └── utils/                      Validators, date formatting
@@ -120,119 +158,65 @@ lib/
 ├── models/                    Task, TeamMember + the three enums
 ├── services/                  SLA rules, storage, seed data, list query
 ├── repositories/              Task / member / session data access
-├── widgets/                   Widgets shared by more than one screen
-└── screens/                   One folder per screen, one file per screen
-    ├── auth/sign_in_screen.dart
-    ├── dashboard/dashboard_screen.dart
-    ├── tasks/task_list_screen.dart
-    ├── tasks/task_detail_screen.dart
-    ├── tasks/task_form_screen.dart
-    ├── team/team_members_screen.dart
-    ├── profile/profile_screen.dart
-    ├── stats/task_statistics_screen.dart
-    └── home_shell.dart        Bottom navigation container
+├── widgets/common/            Widgets shared across tabs
+└── screens/
+    ├── home_shell.dart        The bottom navigation container (shared)
+    ├── home/                  ← Home owner
+    ├── tasks/                 ← Tasks owner
+    ├── team/                  ← Team owner
+    └── profile/               ← Profile owner
 ```
 
-A widget used by two or more screens lives in `lib/widgets/`. A widget used by
-exactly one screen lives in that screen's own `widgets/` folder. No screen
-imports another screen's private widgets.
+---
 
-### State management
+## State management
 
-Plain `setState`, as the assignment asks for. It works because the
-repositories keep the data in memory:
-
-- Every screen reads `TaskRepository.instance.all` **inside `build`**, so it is
-  never holding a stale copy.
-- After a screen changes something it calls `setState` and then
-  `widget.onDataChanged()`, which rebuilds `HomeShell` and therefore all four
-  tabs. That is why completing a task in the list immediately moves the
-  dashboard counters.
-- Navigation results carry the same signal: `Navigator.pushNamed<bool>` returns
-  `true` when the form saved or the detail screen deleted something.
+Plain `setState`, as the assignment requires. It works because the repositories
+are already in memory: read them inside `build`, call `setState` after you
+change something, and the screen is correct.
 
 The one exception is `ThemeController`, a `ValueNotifier`. The theme is read at
-the very top of the tree (`MaterialApp`) but changed from deep inside the
-profile screen, and `setState` cannot cross that distance.
-
-### Navigation
-
-Named routes through `onGenerateRoute` (`core/navigation/app_router.dart`),
-because two routes take typed arguments. Only a task **id** is ever passed
-between screens, never a `Task` object — the destination re-reads it from the
-repository so it cannot show a stale copy.
-
-`HomeShell` holds the four tabs in an `IndexedStack`, which keeps each tab's
-scroll position and filters alive while you switch between them.
-
-### Persistence: why SharedPreferences and not sqflite
-
-The app stores two small collections that are always read in full and never
-queried relationally — the dashboard, the list and the statistics screen all
-start from "give me every task" and filter in Dart. A key-value store holding
-two JSON documents does that in one read, with no schema and no migrations.
-sqflite would only start to pay off with indexed queries or thousands of rows.
-
-Everything goes through `StorageService`, so swapping the backing store later
-means rewriting one file.
-
-### Validation
-
-Rules live in `core/utils/validators.dart`, not in the widgets, so the same
-rule can be reused and unit tested. Highlights:
-
-- **Title** — required, 3–80 characters after trimming.
-- **Category** — required.
-- **Assignee** — required, because a task nobody owns can never be chased when
-  its SLA turns red.
-- **Due date** — required, cannot be in the past, cannot be more than two years
-  ahead. The date picker enforces the same window, so the validator is the
-  safety net rather than the only defence.
-- **Email** — checked against a pattern that catches the realistic typos.
-- Leaving the form with unsaved edits asks for confirmation first (`PopScope`).
+the very top of the tree (`MaterialApp`) but changed from inside the Profile
+tab, and `setState` cannot reach that far.
 
 ---
 
-## What is not finished
+## Shared files — coordinate before you edit
 
-This is an ~80% build. Three work streams are deliberately left for the rest of
-the team. The app names them in the UI rather than hiding them behind buttons
-that silently do nothing, and each one has a branch ready off `main`.
+Four of these, and they are where merge conflicts will come from:
 
-| Stream | Branch | Area | What is missing |
-|--------|--------|------|-----------------|
-| A | `feature/stats-analysis` | Task statistics | On-time delivery rate, workload by member, upcoming deadlines. `SlaService.summarise`, `Task.completedAt` and `TaskRepository.byAssignee` already expose everything they need. |
-| B | `feature/team-member-crud` | Team members | Add / edit / delete. `MemberRepository.save()` and `newId()` exist; `delete()` does not, because it first has to be decided what happens to the tasks that member owns. |
-| C | `feature/profile-settings` | Profile settings | Edit profile, appearance, about. `ThemeController` already loads, saves and applies the theme mode, so appearance only needs a selector wired to `setMode()`. |
+- `lib/screens/home_shell.dart` — swapping your placeholder for your real
+  screen is **one line**. Keep it to that line.
+- `lib/core/constants/app_routes.dart` and `lib/core/navigation/app_router.dart`
+  — add your routes in one small commit on day one and push it immediately.
+- `lib/widgets/common/` — tell the group before you add or change anything here.
 
-Remove the `UnbuiltFeatureNotice` from a screen as its stream lands.
+Merge `main` into your branch every day. A branch that has not seen `main` in a
+week is a bad afternoon waiting to happen.
 
 ---
 
-## Conventions
+## Rules for everyone
 
-**Colours.** Never write a hex value in a screen. `AppColors.of(context)` gives
-the palette and resolves light/dark automatically. Anything that maps a domain
-value to a colour goes in `StatusColors`.
+- Work on your own branch. Never commit directly to `main`.
+- `flutter analyze` clean and `flutter test` passing before every push.
+- Small commits, real messages: `add SLA filter chips to task list`, not
+  `update`.
+- Add a test for anything with logic in it. `test/` has the pattern.
+- Delete your tab's `TabPlaceholder` as soon as you have something real.
+- You explain your own screen in the demo video. Everyone speaks.
 
-**Spacing and text.** Use the `AppSpacing` and `AppTypography` scales. A gap
-that needs a value off the scale usually means the layout wants rethinking.
+## Recovering the earlier version
 
-**Where a widget lives.** Used by two or more screens → `lib/widgets/`. Used by
-exactly one → that screen's own `widgets/` folder.
+A complete working version of this app exists at the tag `v1-complete-app` if
+you ever need to see one way of solving a screen:
 
-**Storage.** Everything goes through `StorageService`, and new keys go in
-`StorageKeys` so two features cannot collide on the same string.
+```bash
+git show v1-complete-app:lib/screens/tasks/task_list_screen.dart
+```
 
-**Errors.** Wrap storage writes in `try`/`catch (StorageException)` and report
-through `AppFeedback.showError`. Destructive actions go through
-`AppFeedback.confirm` first.
-
-**State.** `setState` plus `widget.onDataChanged()` after anything that writes.
-Do not add a state-management package — the assignment asks for `setState`.
-
-**Before a pull request.** `flutter analyze` clean and `flutter test` passing.
-Add a test for anything with logic in it; the files in `test/` are the pattern.
+Read it for ideas, but write your own — you have to explain your code on
+camera, and the marks are for what you understand, not what you copy.
 
 ---
 
