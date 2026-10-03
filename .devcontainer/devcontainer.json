@@ -1,0 +1,22 @@
+{
+  "name": "Flutter Development Environment",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "Dart-Code.flutter",
+        "Dart-Code.dart-code"
+      ]
+    }
+  },
+  "forwardPorts": [8080],
+  "portsAttributes": {
+    "8080": {
+      "label": "Flutter Web App",
+      "onAutoForward": "openBrowser"
+    }
+  },
+  "postCreateCommand": "flutter pub get"
+}
