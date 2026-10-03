@@ -15,6 +15,7 @@
 /// casts the route it gets back, and a mismatch throws at runtime.
 abstract final class AppRoutes {
   /// The shell that holds the four bottom-navigation tabs.
+  static const String login = '/login';
   static const String home = '/';
 
   // The welcome / sign-in route goes here when that screen exists.
