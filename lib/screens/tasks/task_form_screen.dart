@@ -12,7 +12,9 @@ import '../../models/task_status.dart';
 import '../../repositories/member_repository.dart';
 import '../../repositories/session_repository.dart';
 import '../../repositories/task_repository.dart';
+import '../../services/storage_service.dart';
 import '../../widgets/common/app_buttons.dart';
+import '../../widgets/common/app_feedback.dart';
 import '../../widgets/common/member_avatar.dart';
 
 /// Create or edit a task.
@@ -52,6 +54,8 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
 
   TaskPriority _priority = TaskPriority.medium;
   TaskStatus _status = TaskStatus.todo;
+
+  bool _isSaving = false;
 
   bool get _isEditing => widget.taskId != null;
 
@@ -97,6 +101,70 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
 
     _priority = task?.priority ?? TaskPriority.medium;
     _status = task?.status ?? TaskStatus.todo;
+  }
+
+  Future<void> _save() async {
+    FocusScope.of(context).unfocus();
+
+    // Both halves of the validation run before deciding, so every problem is
+    // shown at once rather than one per attempt.
+    final fieldsValid = _formKey.currentState!.validate();
+    final dateError = Validators.dueDate(_dueDate);
+    setState(() => _dueDateError = dateError);
+
+    if (!fieldsValid || dateError != null) {
+      AppFeedback.showError(context, 'Fix the highlighted fields to continue.');
+      return;
+    }
+
+    setState(() => _isSaving = true);
+
+    final now = DateTime.now();
+    final existing = _existingTask;
+
+    final task = existing == null
+        ? Task(
+            id: TaskRepository.instance.newId(),
+            title: _titleController.text.trim(),
+            description: _descriptionController.text.trim(),
+            category: _category ?? '',
+            assigneeId: _assigneeId ?? '',
+            dueDate: _dueDate!,
+            priority: _priority,
+            status: _status,
+            createdAt: now,
+            updatedAt: now,
+            completedAt: _status.isComplete ? now : null,
+          )
+        : existing.copyWith(
+            title: _titleController.text.trim(),
+            description: _descriptionController.text.trim(),
+            category: _category ?? '',
+            assigneeId: _assigneeId ?? '',
+            dueDate: _dueDate!,
+            priority: _priority,
+            status: _status,
+            updatedAt: now,
+            // Reopening a finished task has to clear the completion stamp,
+            // or the statistics keep counting it as delivered.
+            completedAt: _status.isComplete ? (existing.completedAt ?? now) : null,
+            clearCompletedAt: !_status.isComplete,
+          );
+
+    try {
+      await TaskRepository.instance.save(task);
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+      AppFeedback.showSuccess(
+        context,
+        _isEditing ? 'Task updated.' : 'Task created.',
+      );
+    } on StorageException catch (error) {
+      // Stay on the form so nothing the user typed is lost.
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+      AppFeedback.showError(context, error.message);
+    }
   }
 
   Future<void> _pickDueDate() async {
@@ -272,7 +340,8 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
 
             PrimaryButton(
               label: _isEditing ? 'Save changes' : 'Create task',
-              onPressed: () {},
+              isLoading: _isSaving,
+              onPressed: _save,
             ),
           ],
         ),
