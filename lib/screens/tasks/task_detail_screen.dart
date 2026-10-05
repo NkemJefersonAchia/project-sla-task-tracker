@@ -11,7 +11,9 @@ import '../../repositories/member_repository.dart';
 import '../../repositories/task_repository.dart';
 import '../../services/sla_service.dart';
 import '../../services/storage_service.dart';
+import '../../widgets/common/app_card.dart';
 import '../../widgets/common/app_feedback.dart';
+import '../../widgets/common/section_header.dart';
 import '../../widgets/common/member_avatar.dart';
 import '../../widgets/common/property_row.dart';
 import '../../widgets/task/sla_badge.dart';
@@ -154,6 +156,64 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           ),
           const SizedBox(height: AppSpacing.sm),
           Divider(color: c.border),
+          const SizedBox(height: AppSpacing.xl),
+
+          SectionHeader(title: 'SLA status'),
+          _SlaCard(evaluation: sla),
+        ],
+      ),
+    );
+  }
+}
+
+/// The SLA verdict, and the reason for it.
+///
+/// The explanation is not written here. It comes from SlaService.evaluate,
+/// the same call that decided the status, so the words on screen and the rule
+/// that produced them cannot drift apart as the thresholds change.
+class _SlaCard extends StatelessWidget {
+  const _SlaCard({required this.evaluation});
+
+  final SlaEvaluation evaluation;
+
+  @override
+  Widget build(BuildContext context) {
+    final pair = StatusColors.forSla(context, evaluation.status);
+
+    return AppCard(
+      // Tinted fill with a matching border rather than the usual white card.
+      // This is the one block on the page that should carry colour.
+      background: pair.background,
+      borderColor: pair.background,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            StatusColors.iconForSla(evaluation.status),
+            size: 18,
+            color: pair.foreground,
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  evaluation.status.label,
+                  style: AppTypography.bodyStrong.copyWith(
+                    color: pair.foreground,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  evaluation.explanation,
+                  style: AppTypography.caption.copyWith(
+                    color: pair.foreground,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
