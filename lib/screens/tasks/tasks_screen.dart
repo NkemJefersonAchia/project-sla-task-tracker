@@ -8,6 +8,7 @@ import '../../repositories/task_repository.dart';
 import '../../models/sla_status.dart';
 import '../../services/sla_service.dart';
 import '../../services/task_query.dart';
+import '../../widgets/common/app_buttons.dart';
 import '../../widgets/common/empty_state.dart';
 import 'widgets/sla_filter_bar.dart';
 import 'widgets/task_row.dart';
@@ -43,6 +44,11 @@ class _TasksScreenState extends State<TasksScreen> {
 
   void _setSearchTerm(String value) {
     setState(() => _query = _query.copyWith(searchTerm: value));
+  }
+
+  void _clearFilters() {
+    _searchController.clear();
+    setState(() => _query = const TaskQuery());
   }
 
   void _setSlaFilter(SlaStatus? status) {
@@ -128,6 +134,22 @@ class _TasksScreenState extends State<TasksScreen> {
   /// shrug. Centred because, unlike inside a ListView, there is real vertical
   /// space here to centre within.
   Widget _buildEmptyState() {
+    if (_query.hasActiveFilters) {
+      return Center(
+        child: EmptyState(
+          icon: Icons.filter_alt_off_outlined,
+          title: 'No tasks match',
+          message: 'Try a different search term, or clear the filters to see '
+              'the whole board again.',
+          action: SecondaryButton(
+            label: 'Clear filters',
+            expand: false,
+            onPressed: _clearFilters,
+          ),
+        ),
+      );
+    }
+
     return const Center(
       child: EmptyState(
         icon: Icons.checklist_rounded,
