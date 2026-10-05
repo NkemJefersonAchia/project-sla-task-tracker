@@ -118,6 +118,22 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               ],
             ),
           ),
+          PropertyRow(
+            icon: Icons.flag_outlined,
+            label: 'Priority',
+            child: ToneBadge(
+              label: task.priority.label,
+              pair: StatusColors.forPriority(context, task.priority),
+            ),
+          ),
+          PropertyRow(
+            icon: Icons.donut_large_outlined,
+            label: 'Status',
+            child: ToneBadge(
+              label: task.status.label,
+              pair: StatusColors.forTaskStatus(context, task.status),
+            ),
+          ),
           const SizedBox(height: AppSpacing.sm),
           Divider(color: c.border),
         ],
