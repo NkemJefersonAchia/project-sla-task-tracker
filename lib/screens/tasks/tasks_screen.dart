@@ -5,7 +5,9 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../repositories/member_repository.dart';
 import '../../repositories/task_repository.dart';
+import '../../models/sla_status.dart';
 import '../../services/task_query.dart';
+import 'widgets/sla_filter_bar.dart';
 import 'widgets/task_row.dart';
 
 /// The Tasks tab: every task on the project, most urgent first.
@@ -41,6 +43,14 @@ class _TasksScreenState extends State<TasksScreen> {
     setState(() => _query = _query.copyWith(searchTerm: value));
   }
 
+  void _setSlaFilter(SlaStatus? status) {
+    setState(() {
+      _query = status == null
+          ? _query.copyWith(clearSla: true)
+          : _query.copyWith(slaFilter: status);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
@@ -67,6 +77,11 @@ class _TasksScreenState extends State<TasksScreen> {
               },
             ),
             const SizedBox(height: AppSpacing.md),
+            SlaFilterBar(
+              selected: _query.slaFilter,
+              onSelected: _setSlaFilter,
+            ),
+            const SizedBox(height: AppSpacing.sm),
             Expanded(
               child: ListView.separated(
                 padding: const EdgeInsets.fromLTRB(
