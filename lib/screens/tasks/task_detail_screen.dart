@@ -4,7 +4,13 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/theme/status_colors.dart';
+import '../../core/utils/date_formatting.dart';
+import '../../models/sla_status.dart';
+import '../../repositories/member_repository.dart';
 import '../../repositories/task_repository.dart';
+import '../../services/sla_service.dart';
+import '../../widgets/common/member_avatar.dart';
+import '../../widgets/common/property_row.dart';
 import '../../widgets/task/sla_badge.dart';
 
 /// Everything about one task.
@@ -27,6 +33,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
     final task = TaskRepository.instance.byId(widget.taskId);
+    final assignee = MemberRepository.instance.byId(task?.assigneeId);
+    final sla = task == null ? null : SlaService.evaluate(task);
 
     return Scaffold(
       backgroundColor: c.canvas,
@@ -59,6 +67,59 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               style: AppTypography.body.copyWith(color: c.textSecondary),
             ),
           ],
+          const SizedBox(height: AppSpacing.xl),
+          Divider(color: c.border),
+          const SizedBox(height: AppSpacing.sm),
+
+          // The property block. A fixed-width label column means the rows
+          // line up into a clean vertical rule, which is what makes this read
+          // as a record rather than as loose text.
+          PropertyRow(
+            icon: Icons.person_outline_rounded,
+            label: 'Assignee',
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                MemberAvatar(member: assignee, size: 22),
+                const SizedBox(width: AppSpacing.sm),
+                Flexible(
+                  child: Text(
+                    assignee?.name ?? 'Unassigned',
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.caption.copyWith(
+                      color: c.textPrimary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          PropertyRow(
+            icon: Icons.event_outlined,
+            label: 'Due date',
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  DateFormatting.full(task.dueDate),
+                  style: AppTypography.caption.copyWith(color: c.textPrimary),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Text(
+                  // The exact date and the human reading of it, together: one
+                  // is unambiguous, the other is the one you actually act on.
+                  DateFormatting.relativeDueDate(task.dueDate),
+                  style: AppTypography.caption.copyWith(
+                    color: sla!.status == SlaStatus.overdue
+                        ? c.red
+                        : c.textTertiary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Divider(color: c.border),
         ],
       ),
     );
