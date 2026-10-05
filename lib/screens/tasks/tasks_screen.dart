@@ -61,6 +61,10 @@ class _TasksScreenState extends State<TasksScreen> {
             _SearchField(
               controller: _searchController,
               onChanged: _setSearchTerm,
+              onClear: () {
+                _searchController.clear();
+                _setSearchTerm('');
+              },
             ),
             const SizedBox(height: AppSpacing.md),
             Expanded(
@@ -141,10 +145,15 @@ class _Header extends StatelessWidget {
 
 /// Search across the title, the category and the description.
 class _SearchField extends StatelessWidget {
-  const _SearchField({required this.controller, required this.onChanged});
+  const _SearchField({
+    required this.controller,
+    required this.onChanged,
+    required this.onClear,
+  });
 
   final TextEditingController controller;
   final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
 
   @override
   Widget build(BuildContext context) {
@@ -156,10 +165,19 @@ class _SearchField extends StatelessWidget {
         controller: controller,
         onChanged: onChanged,
         textInputAction: TextInputAction.search,
-        decoration: const InputDecoration(
+        decoration: InputDecoration(
           hintText: 'Search tasks',
-          prefixIcon: Icon(Icons.search_rounded, size: 18),
+          prefixIcon: const Icon(Icons.search_rounded, size: 18),
           isDense: true,
+          // The clear button only exists while there is something to clear,
+          // so an empty field is not permanently cluttered by a dead control.
+          suffixIcon: controller.text.isEmpty
+              ? null
+              : IconButton(
+                  icon: const Icon(Icons.close_rounded, size: 16),
+                  tooltip: 'Clear search',
+                  onPressed: onClear,
+                ),
         ),
       ),
     );
