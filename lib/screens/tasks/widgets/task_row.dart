@@ -4,10 +4,13 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_typography.dart';
 import '../../../core/utils/date_formatting.dart';
+import '../../../models/sla_status.dart';
 import '../../../models/task.dart';
 import '../../../models/team_member.dart';
 import '../../../widgets/common/app_card.dart';
+import '../../../services/sla_service.dart';
 import '../../../widgets/common/member_avatar.dart';
+import '../../../widgets/task/sla_badge.dart';
 
 /// One task as it appears in the list.
 ///
@@ -34,6 +37,11 @@ class TaskRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
 
+    // Recomputed on every build rather than read from the task. The SLA is
+    // never stored, so a row that was yellow yesterday turns red today
+    // without anybody touching the data.
+    final sla = SlaService.statusOf(task);
+
     return AppCard(
       onTap: onTap,
       padding: const EdgeInsets.symmetric(
@@ -43,11 +51,22 @@ class TaskRow extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            task.title,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: AppTypography.bodyStrong.copyWith(color: c.textPrimary),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  task.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTypography.bodyStrong.copyWith(
+                    color: c.textPrimary,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              SlaBadge(status: sla, compact: true),
+            ],
           ),
           const SizedBox(height: 6),
           Row(
@@ -67,7 +86,11 @@ class TaskRow extends StatelessWidget {
               _Separator(color: c.textTertiary),
               Text(
                 DateFormatting.relativeDueDate(task.dueDate),
-                style: AppTypography.caption.copyWith(color: c.textSecondary),
+                style: AppTypography.caption.copyWith(
+                  // The deadline itself turns red once it is missed, so the
+                  // urgency survives even if the badge is skipped over.
+                  color: sla == SlaStatus.overdue ? c.red : c.textSecondary,
+                ),
               ),
             ],
           ),
