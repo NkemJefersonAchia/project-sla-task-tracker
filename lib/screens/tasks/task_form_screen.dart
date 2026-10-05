@@ -5,8 +5,11 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/utils/validators.dart';
 import '../../models/task.dart';
+import '../../repositories/member_repository.dart';
+import '../../repositories/session_repository.dart';
 import '../../repositories/task_repository.dart';
 import '../../widgets/common/app_buttons.dart';
+import '../../widgets/common/member_avatar.dart';
 
 /// Create or edit a task.
 ///
@@ -36,6 +39,7 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
   late final TextEditingController _descriptionController;
 
   String? _category;
+  String? _assigneeId;
 
   bool get _isEditing => widget.taskId != null;
 
@@ -68,6 +72,11 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
     // An unrecognised stored category resolves to null so the field shows its
     // hint rather than a value that is not in the list.
     _category = _categories.contains(task?.category) ? task!.category : null;
+
+    // A new task defaults to whoever is signed in. Most tasks are created by
+    // the person who is about to do them, and a default that is right most of
+    // the time is worth more than an empty field that is never wrong.
+    _assigneeId = task?.assigneeId ?? SessionRepository.instance.currentUser?.id;
   }
 
   @override
@@ -149,6 +158,35 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
               ],
               onChanged: (value) => setState(() => _category = value),
               validator: Validators.category,
+            ),
+            const _FieldLabel(label: 'Assign to', isRequired: true),
+            DropdownButtonFormField<String>(
+              initialValue: _assigneeId,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                hintText: 'Select a team member',
+              ),
+              items: [
+                for (final member in MemberRepository.instance.all)
+                  DropdownMenuItem(
+                    value: member.id,
+                    child: Row(
+                      children: [
+                        MemberAvatar(member: member, size: 22),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: Text(
+                            '${member.name} - ${member.role}',
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.caption,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+              onChanged: (value) => setState(() => _assigneeId = value),
+              validator: Validators.assignee,
             ),
             const SizedBox(height: AppSpacing.xxl),
 
