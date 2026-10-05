@@ -3,9 +3,12 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
+import '../../core/theme/status_colors.dart';
 import '../../core/utils/date_formatting.dart';
 import '../../core/utils/validators.dart';
 import '../../models/task.dart';
+import '../../models/task_priority.dart';
+import '../../models/task_status.dart';
 import '../../repositories/member_repository.dart';
 import '../../repositories/session_repository.dart';
 import '../../repositories/task_repository.dart';
@@ -46,6 +49,9 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
   /// The date picker is not a TextFormField, so the Form cannot validate it.
   /// Its error message is rendered by hand to match the others.
   String? _dueDateError;
+
+  TaskPriority _priority = TaskPriority.medium;
+  TaskStatus _status = TaskStatus.todo;
 
   bool get _isEditing => widget.taskId != null;
 
@@ -88,6 +94,9 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
     // unchanged is not an obviously fake deadline.
     _dueDate = task?.dueDate ??
         Task.dateOnly(DateTime.now().add(const Duration(days: 7)));
+
+    _priority = task?.priority ?? TaskPriority.medium;
+    _status = task?.status ?? TaskStatus.todo;
   }
 
   Future<void> _pickDueDate() async {
@@ -230,6 +239,35 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
               errorText: _dueDateError,
               onTap: _pickDueDate,
             ),
+            const _FieldLabel(label: 'Priority'),
+            _PrioritySelector(
+              value: _priority,
+              onChanged: (value) => setState(() => _priority = value),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Priority also decides how early the SLA flags this task: '
+              'urgent work is marked At Risk sooner than low priority work.',
+              style: AppTypography.caption.copyWith(color: c.textTertiary),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+
+            const _FieldLabel(label: 'Status'),
+            DropdownButtonFormField<TaskStatus>(
+              initialValue: _status,
+              isExpanded: true,
+              items: [
+                for (final status in TaskStatus.values)
+                  DropdownMenuItem(
+                    value: status,
+                    child: Text(status.label, style: AppTypography.caption),
+                  ),
+              ],
+              onChanged: (value) {
+                if (value == null) return;
+                setState(() => _status = value);
+              },
+            ),
             const SizedBox(height: AppSpacing.xxl),
 
             PrimaryButton(
@@ -237,6 +275,89 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
               onPressed: () {},
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Four segmented options rather than a dropdown.
+///
+/// For a short fixed list, showing every choice is faster than opening a menu
+/// to find out what the choices are - and it makes the current value readable
+/// without any interaction at all.
+class _PrioritySelector extends StatelessWidget {
+  const _PrioritySelector({required this.value, required this.onChanged});
+
+  final TaskPriority value;
+  final ValueChanged<TaskPriority> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        for (final priority in TaskPriority.values)
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(
+                right:
+                    priority == TaskPriority.values.last ? 0 : AppSpacing.sm,
+              ),
+              child: _PriorityOption(
+                priority: priority,
+                selected: priority == value,
+                onTap: () => onChanged(priority),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _PriorityOption extends StatelessWidget {
+  const _PriorityOption({
+    required this.priority,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final TaskPriority priority;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+    final pair = StatusColors.forPriority(context, priority);
+
+    return Material(
+      // Unselected options stay neutral. Showing all four in their own
+      // colours would turn the row into a traffic light and make it unclear
+      // which one is actually chosen.
+      color: selected ? pair.background : c.surfaceMuted,
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.md - 2),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(
+              color: selected ? pair.foreground : c.border,
+            ),
+          ),
+          child: Text(
+            priority.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.badge.copyWith(
+              color: selected ? pair.foreground : c.textSecondary,
+              fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+            ),
+          ),
         ),
       ),
     );
