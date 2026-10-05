@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/constants/app_routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
@@ -82,6 +83,16 @@ class _TasksScreenState extends State<TasksScreen> {
     }
   }
 
+  /// Opens the create form. It pops `true` when something was saved, which is
+  /// the signal to re-read; anything else means the user backed out.
+  Future<void> _createTask() async {
+    final saved = await Navigator.of(context).pushNamed<bool>(
+      AppRoutes.taskForm,
+      arguments: const TaskFormArgs.create(),
+    );
+    if (saved == true && mounted) setState(() {});
+  }
+
   void _setSlaFilter(SlaStatus? status) {
     setState(() {
       _query = status == null
@@ -99,6 +110,23 @@ class _TasksScreenState extends State<TasksScreen> {
 
     return Scaffold(
       backgroundColor: c.canvas,
+      floatingActionButton: FloatingActionButton(
+        onPressed: _createTask,
+        // Every tab is alive at once inside the shell's IndexedStack, and
+        // Flutter gives every FAB the same default hero tag. Two heroes
+        // sharing a tag in one subtree throws the moment a route is pushed,
+        // so this one is named.
+        heroTag: 'tasks-new-task',
+        backgroundColor: c.accent,
+        foregroundColor: c.canvas,
+        elevation: 0,
+        highlightElevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+        ),
+        tooltip: 'New task',
+        child: const Icon(Icons.add_rounded),
+      ),
       body: SafeArea(
         child: Column(
           children: [
@@ -133,7 +161,9 @@ class _TasksScreenState extends State<TasksScreen> {
                   AppSpacing.screenPadding,
                   AppSpacing.sm,
                   AppSpacing.screenPadding,
-                  AppSpacing.xxl,
+                  // Clears the floating button at the end of the scroll so it
+                  // never sits on top of the last row.
+                  AppSpacing.xxl * 2.5,
                 ),
                 itemCount: visibleTasks.length,
                 // A gap between rows rather than a divider: AppCard already
