@@ -60,6 +60,9 @@ class TaskRow extends StatelessWidget {
         children: [
           if (onToggleComplete != null) ...[
             _CompletionBox(
+              // A stable key per task so a widget test can drive this
+              // checkbox directly rather than guessing at coordinates.
+              key: ValueKey('complete-${task.id}'),
               isDone: isDone,
               onTap: onToggleComplete!,
             ),
@@ -139,7 +142,11 @@ class TaskRow extends StatelessWidget {
 /// Material's own Checkbox is larger, carries a ripple halo and sits on a 48px
 /// tap target that would roughly double the height of every row.
 class _CompletionBox extends StatelessWidget {
-  const _CompletionBox({required this.isDone, required this.onTap});
+  const _CompletionBox({
+    super.key,
+    required this.isDone,
+    required this.onTap,
+  });
 
   final bool isDone;
   final VoidCallback onTap;
