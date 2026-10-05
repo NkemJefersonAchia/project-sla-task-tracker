@@ -6,9 +6,12 @@ import '../../core/theme/app_typography.dart';
 import '../../core/theme/status_colors.dart';
 import '../../core/utils/date_formatting.dart';
 import '../../models/sla_status.dart';
+import '../../models/task_status.dart';
 import '../../repositories/member_repository.dart';
 import '../../repositories/task_repository.dart';
 import '../../services/sla_service.dart';
+import '../../services/storage_service.dart';
+import '../../widgets/common/app_feedback.dart';
 import '../../widgets/common/member_avatar.dart';
 import '../../widgets/common/property_row.dart';
 import '../../widgets/task/sla_badge.dart';
@@ -29,6 +32,18 @@ class TaskDetailScreen extends StatefulWidget {
 }
 
 class _TaskDetailScreenState extends State<TaskDetailScreen> {
+  Future<void> _changeStatus(TaskStatus status) async {
+    try {
+      await TaskRepository.instance.updateStatus(widget.taskId, status);
+      if (!mounted) return;
+      setState(() {});
+      AppFeedback.showSuccess(context, 'Status set to ${status.label}.');
+    } on StorageException catch (error) {
+      if (!mounted) return;
+      AppFeedback.showError(context, error.message);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
@@ -129,14 +144,69 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           PropertyRow(
             icon: Icons.donut_large_outlined,
             label: 'Status',
-            child: ToneBadge(
-              label: task.status.label,
-              pair: StatusColors.forTaskStatus(context, task.status),
+            // The one property editable in place. It is the field that moves
+            // several times a week, while everything else is usually set once
+            // and left alone - so it is worth saving the trip to the form.
+            child: _StatusPicker(
+              value: task.status,
+              onChanged: _changeStatus,
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
           Divider(color: c.border),
         ],
+      ),
+    );
+  }
+}
+
+/// Inline status picker: the status badge itself, with a chevron.
+///
+/// It looks like the value it edits rather than like a form control, so the
+/// property block stays a record you can change rather than becoming a form
+/// you have to fill in.
+class _StatusPicker extends StatelessWidget {
+  const _StatusPicker({required this.value, required this.onChanged});
+
+  final TaskStatus value;
+  final ValueChanged<TaskStatus> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final pair = StatusColors.forTaskStatus(context, value);
+
+    return PopupMenuButton<TaskStatus>(
+      initialValue: value,
+      tooltip: 'Change status',
+      onSelected: onChanged,
+      itemBuilder: (context) => [
+        for (final status in TaskStatus.values)
+          PopupMenuItem(value: status, child: Text(status.label)),
+      ],
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: 4,
+        ),
+        decoration: BoxDecoration(
+          color: pair.background,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              value.label,
+              style: AppTypography.badge.copyWith(color: pair.foreground),
+            ),
+            const SizedBox(width: 2),
+            Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 15,
+              color: pair.foreground,
+            ),
+          ],
+        ),
       ),
     );
   }
