@@ -35,11 +35,27 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
   late final TextEditingController _titleController;
   late final TextEditingController _descriptionController;
 
+  String? _category;
+
   bool get _isEditing => widget.taskId != null;
 
   Task? get _existingTask => widget.taskId == null
       ? null
       : TaskRepository.instance.byId(widget.taskId!);
+
+  /// The categories this team works in.
+  ///
+  /// A fixed list rather than free text: it removes a validation path, it
+  /// stops 'QA' and 'Quality Assurance' both existing, and on a phone picking
+  /// from six options beats typing.
+  static const List<String> _categories = [
+    'UI/UX Design',
+    'Mobile Development',
+    'Backend Logic',
+    'Quality Assurance',
+    'Documentation',
+    'Project Setup',
+  ];
 
   @override
   void initState() {
@@ -48,6 +64,10 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
     _titleController = TextEditingController(text: task?.title ?? '');
     _descriptionController =
         TextEditingController(text: task?.description ?? '');
+
+    // An unrecognised stored category resolves to null so the field shows its
+    // hint rather than a value that is not in the list.
+    _category = _categories.contains(task?.category) ? task!.category : null;
   }
 
   @override
@@ -114,6 +134,21 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
                     'this up.',
               ),
               validator: Validators.taskDescription,
+            ),
+            const _FieldLabel(label: 'Category', isRequired: true),
+            DropdownButtonFormField<String>(
+              initialValue: _category,
+              isExpanded: true,
+              decoration: const InputDecoration(hintText: 'Pick a category'),
+              items: [
+                for (final category in _categories)
+                  DropdownMenuItem(
+                    value: category,
+                    child: Text(category, style: AppTypography.caption),
+                  ),
+              ],
+              onChanged: (value) => setState(() => _category = value),
+              validator: Validators.category,
             ),
             const SizedBox(height: AppSpacing.xxl),
 
