@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
+import '../../core/utils/date_formatting.dart';
 import '../../core/utils/validators.dart';
 import '../../models/task.dart';
 import '../../repositories/member_repository.dart';
@@ -40,6 +41,11 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
 
   String? _category;
   String? _assigneeId;
+  DateTime? _dueDate;
+
+  /// The date picker is not a TextFormField, so the Form cannot validate it.
+  /// Its error message is rendered by hand to match the others.
+  String? _dueDateError;
 
   bool get _isEditing => widget.taskId != null;
 
@@ -77,6 +83,36 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
     // the person who is about to do them, and a default that is right most of
     // the time is worth more than an empty field that is never wrong.
     _assigneeId = task?.assigneeId ?? SessionRepository.instance.currentUser?.id;
+
+    // A week out: long enough to be plausible, short enough that leaving it
+    // unchanged is not an obviously fake deadline.
+    _dueDate = task?.dueDate ??
+        Task.dateOnly(DateTime.now().add(const Duration(days: 7)));
+  }
+
+  Future<void> _pickDueDate() async {
+    final today = Task.dateOnly(DateTime.now());
+
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _dueDate ?? today.add(const Duration(days: 7)),
+      // The picker enforces the same window the validator checks, so an
+      // invalid date is hard to produce in the first place. The validator is
+      // the safety net, not the only line of defence.
+      firstDate: today,
+      lastDate: DateTime(
+        today.year + Validators.maxDueDateYearsAhead,
+        today.month,
+        today.day,
+      ),
+      helpText: 'Select the deadline',
+    );
+
+    if (picked == null) return;
+    setState(() {
+      _dueDate = Task.dateOnly(picked);
+      _dueDateError = null;
+    });
   }
 
   @override
@@ -188,6 +224,12 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
               onChanged: (value) => setState(() => _assigneeId = value),
               validator: Validators.assignee,
             ),
+            const _FieldLabel(label: 'Due date', isRequired: true),
+            _DueDateField(
+              value: _dueDate,
+              errorText: _dueDateError,
+              onTap: _pickDueDate,
+            ),
             const SizedBox(height: AppSpacing.xxl),
 
             PrimaryButton(
@@ -197,6 +239,83 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// A tappable field that looks like the other inputs but opens a date picker.
+///
+/// Built by hand rather than with a TextFormField, because the value is a
+/// DateTime rather than text - which also means it has to render its own
+/// error message to match what the real form fields do.
+class _DueDateField extends StatelessWidget {
+  const _DueDateField({
+    required this.value,
+    required this.onTap,
+    this.errorText,
+  });
+
+  final DateTime? value;
+  final VoidCallback onTap;
+  final String? errorText;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+    final hasError = errorText != null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.md + 2,
+            ),
+            decoration: BoxDecoration(
+              color: c.surfaceMuted,
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: Border.all(color: hasError ? c.red : c.border),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.event_outlined, size: 18, color: c.textTertiary),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Text(
+                    value == null
+                        ? 'Select a date'
+                        : DateFormatting.full(value!),
+                    style: AppTypography.body.copyWith(
+                      color: value == null ? c.textTertiary : c.textPrimary,
+                    ),
+                  ),
+                ),
+                if (value != null)
+                  Text(
+                    // Confirms what the chosen date actually means, so an
+                    // off-by-a-month slip is visible before saving.
+                    DateFormatting.relativeDueDate(value!),
+                    style: AppTypography.caption.copyWith(
+                      color: c.textTertiary,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        if (hasError)
+          Padding(
+            padding: const EdgeInsets.only(top: 6, left: AppSpacing.md),
+            child: Text(
+              errorText!,
+              style: AppTypography.caption.copyWith(color: c.red),
+            ),
+          ),
+      ],
     );
   }
 }
