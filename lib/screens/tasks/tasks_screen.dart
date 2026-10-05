@@ -93,6 +93,16 @@ class _TasksScreenState extends State<TasksScreen> {
     if (saved == true && mounted) setState(() {});
   }
 
+  /// Opens one task. The detail screen can delete it, so we re-read on the
+  /// way back regardless of what it returns.
+  Future<void> _openTask(String taskId) async {
+    await Navigator.of(context).pushNamed(
+      AppRoutes.taskDetail,
+      arguments: TaskDetailArgs(taskId),
+    );
+    if (mounted) setState(() {});
+  }
+
   void _setSlaFilter(SlaStatus? status) {
     setState(() {
       _query = status == null
@@ -177,7 +187,7 @@ class _TasksScreenState extends State<TasksScreen> {
                     task: task,
                     assignee:
                         MemberRepository.instance.byId(task.assigneeId),
-                    onTap: () {},
+                    onTap: () => _openTask(task.id),
                     onToggleComplete: () => _toggleComplete(task.id),
                   );
                 },
