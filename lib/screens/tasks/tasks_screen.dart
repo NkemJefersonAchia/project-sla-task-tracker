@@ -8,6 +8,7 @@ import '../../repositories/task_repository.dart';
 import '../../models/sla_status.dart';
 import '../../services/sla_service.dart';
 import '../../services/task_query.dart';
+import '../../widgets/common/empty_state.dart';
 import 'widgets/sla_filter_bar.dart';
 import 'widgets/task_row.dart';
 
@@ -88,7 +89,9 @@ class _TasksScreenState extends State<TasksScreen> {
             ),
             const SizedBox(height: AppSpacing.sm),
             Expanded(
-              child: ListView.separated(
+              child: visibleTasks.isEmpty
+                  ? _buildEmptyState()
+                  : ListView.separated(
                 padding: const EdgeInsets.fromLTRB(
                   AppSpacing.screenPadding,
                   AppSpacing.sm,
@@ -105,7 +108,8 @@ class _TasksScreenState extends State<TasksScreen> {
                   final task = visibleTasks[index];
                   return TaskRow(
                     task: task,
-                    assignee: MemberRepository.instance.byId(task.assigneeId),
+                    assignee:
+                        MemberRepository.instance.byId(task.assigneeId),
                     onTap: () {},
                   );
                 },
@@ -113,6 +117,23 @@ class _TasksScreenState extends State<TasksScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// An empty list is not always the same problem.
+  ///
+  /// "You have no tasks" and "nothing matches your filters" need different
+  /// wording and different ways out, so they are two states rather than one
+  /// shrug. Centred because, unlike inside a ListView, there is real vertical
+  /// space here to centre within.
+  Widget _buildEmptyState() {
+    return const Center(
+      child: EmptyState(
+        icon: Icons.checklist_rounded,
+        title: 'No tasks yet',
+        message: 'Add the first piece of work and the SLA tracking starts '
+            'straight away.',
       ),
     );
   }
