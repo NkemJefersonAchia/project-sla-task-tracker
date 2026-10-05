@@ -75,6 +75,28 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     }
   }
 
+  Future<void> _delete(Task task) async {
+    final confirmed = await AppFeedback.confirm(
+      context,
+      title: 'Delete this task?',
+      message: '"${task.title}" will be removed from the project. This cannot '
+          'be undone.',
+    );
+    if (!confirmed || !mounted) return;
+
+    try {
+      await TaskRepository.instance.delete(task.id);
+      if (!mounted) return;
+      // Pop true so the list behind knows to re-read rather than rendering a
+      // row for a task that no longer exists.
+      Navigator.of(context).pop(true);
+      AppFeedback.showSuccess(context, 'Task deleted.');
+    } on StorageException catch (error) {
+      if (!mounted) return;
+      AppFeedback.showError(context, error.message);
+    }
+  }
+
   Future<void> _changeStatus(TaskStatus status) async {
     try {
       await TaskRepository.instance.updateStatus(widget.taskId, status);
@@ -96,7 +118,24 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
     return Scaffold(
       backgroundColor: c.canvas,
-      appBar: AppBar(title: const Text('Task')),
+      appBar: AppBar(
+        title: const Text('Task'),
+        actions: [
+          PopupMenuButton<String>(
+            icon: const Icon(Icons.more_horiz_rounded),
+            tooltip: 'Task actions',
+            onSelected: (value) {
+              if (value == 'delete') _delete(task!);
+            },
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                value: 'delete',
+                child: Text('Delete task', style: TextStyle(color: c.red)),
+              ),
+            ],
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(
           AppSpacing.screenPadding,
