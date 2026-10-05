@@ -1,45 +1,55 @@
 import 'package:flutter/material.dart';
 
-import '../../widgets/common/tab_placeholder.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_spacing.dart';
+import '../../repositories/member_repository.dart';
+import '../../repositories/task_repository.dart';
+import 'widgets/task_row.dart';
 
-/// The Tasks tab - the full list, and everything you can do to one task.
+/// The Tasks tab: every task on the project, most urgent first.
 ///
-/// ## Not built yet. This file is yours.
-///
-/// This is the biggest piece of the app and the one the demo spends most time
-/// on. It is three screens, not one: the list, a single task's detail page,
-/// and the create/edit form.
-///
-/// Build:
-///  * The list itself, one row per task. A row has to show enough to triage
-///    without opening it: title, who owns it, when it is due, and its SLA
-///    state. Use `SlaBadge` so the colours match the rest of the app.
-///  * A search field and a row of SLA filters. `TaskQuery` already does the
-///    filtering and sorting for you and is covered by tests.
-///  * Tapping a row opens a detail screen: the full description, assignee,
-///    deadline, priority, status, and the SLA verdict with its explanation
-///    from `SlaService.evaluate(task).explanation`.
-///  * A create/edit form, with validation. The rules live in `Validators`.
-///  * Completing a task from the list without opening it.
-///
-/// Read the handover document for the full brief and the design rules.
-class TasksScreen extends StatelessWidget {
+/// The screen reads `TaskRepository.instance.all` inside `build`. The
+/// repository is already in memory, so there is no future to await and no
+/// spinner to show - and because nothing is cached here, a change made on
+/// another tab is visible the moment this one rebuilds.
+class TasksScreen extends StatefulWidget {
   const TasksScreen({super.key});
 
   @override
+  State<TasksScreen> createState() => _TasksScreenState();
+}
+
+class _TasksScreenState extends State<TasksScreen> {
+  @override
   Widget build(BuildContext context) {
-    return const TabPlaceholder(
-      tab: 'Tasks',
-      owner: 'feature/tasks-tab',
-      summary: 'The full task list, plus the detail page and the create and '
-          'edit form.',
-      buildThis: [
-        'A scrollable list of every task, most urgent first.',
-        'Search, and filter chips for the four SLA states.',
-        'A detail screen for one task, including the SLA explanation.',
-        'A create and edit form with validation.',
-        'Mark a task complete straight from the list.',
-      ],
+    final c = AppColors.of(context);
+    final tasks = TaskRepository.instance.all;
+
+    return Scaffold(
+      backgroundColor: c.canvas,
+      body: SafeArea(
+        child: ListView.separated(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.screenPadding,
+            AppSpacing.lg,
+            AppSpacing.screenPadding,
+            AppSpacing.xxl,
+          ),
+          itemCount: tasks.length,
+          // A gap between rows rather than a divider: the cards already have
+          // their own hairline, and stacking a divider on top of a border
+          // gives you a 2px line that reads as a mistake.
+          separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
+          itemBuilder: (context, index) {
+            final task = tasks[index];
+            return TaskRow(
+              task: task,
+              assignee: MemberRepository.instance.byId(task.assigneeId),
+              onTap: () {},
+            );
+          },
+        ),
+      ),
     );
   }
 }
