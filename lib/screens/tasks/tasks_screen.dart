@@ -6,6 +6,7 @@ import '../../core/theme/app_typography.dart';
 import '../../repositories/member_repository.dart';
 import '../../repositories/task_repository.dart';
 import '../../models/sla_status.dart';
+import '../../models/task_status.dart';
 import '../../services/sla_service.dart';
 import '../../services/task_query.dart';
 import '../../widgets/common/app_buttons.dart';
@@ -49,6 +50,21 @@ class _TasksScreenState extends State<TasksScreen> {
   void _clearFilters() {
     _searchController.clear();
     setState(() => _query = const TaskQuery());
+  }
+
+  /// Flips a task between Done and To Do straight from the list.
+  ///
+  /// The write is awaited before the screen rebuilds, so what you see has
+  /// actually reached storage rather than only the in-memory copy.
+  Future<void> _toggleComplete(String taskId) async {
+    final task = TaskRepository.instance.byId(taskId);
+    if (task == null) return;
+
+    final next = task.status.isComplete ? TaskStatus.todo : TaskStatus.done;
+    await TaskRepository.instance.updateStatus(taskId, next);
+
+    if (!mounted) return;
+    setState(() {});
   }
 
   void _setSlaFilter(SlaStatus? status) {
@@ -117,6 +133,7 @@ class _TasksScreenState extends State<TasksScreen> {
                     assignee:
                         MemberRepository.instance.byId(task.assigneeId),
                     onTap: () {},
+                    onToggleComplete: () => _toggleComplete(task.id),
                   );
                 },
               ),
