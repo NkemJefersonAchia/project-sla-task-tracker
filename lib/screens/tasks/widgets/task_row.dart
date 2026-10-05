@@ -109,7 +109,12 @@ class TaskRow extends StatelessWidget {
                     ),
                     _Separator(color: c.textTertiary),
                     Text(
-                      DateFormatting.relativeDueDate(task.dueDate),
+                      // A finished task is not chased, so counting days past
+                      // its deadline is noise at best and wrong at worst.
+                      // Once it is done, the deadline is just a date.
+                      isDone
+                          ? 'Due ${DateFormatting.full(task.dueDate)}'
+                          : DateFormatting.relativeDueDate(task.dueDate),
                       style: AppTypography.caption.copyWith(
                         // The deadline itself turns red once it is missed, so
                         // urgency survives even if the badge is skipped over.
