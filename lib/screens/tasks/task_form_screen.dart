@@ -57,6 +57,9 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
 
   bool _isSaving = false;
 
+  /// Tracked so the back gesture can warn before throwing work away.
+  bool _isDirty = false;
+
   bool get _isEditing => widget.taskId != null;
 
   Task? get _existingTask => widget.taskId == null
@@ -82,8 +85,9 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
     super.initState();
     final task = _existingTask;
     _titleController = TextEditingController(text: task?.title ?? '');
-    _descriptionController =
-        TextEditingController(text: task?.description ?? '');
+    _descriptionController = TextEditingController(
+      text: task?.description ?? '',
+    );
 
     // An unrecognised stored category resolves to null so the field shows its
     // hint rather than a value that is not in the list.
@@ -92,15 +96,41 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
     // A new task defaults to whoever is signed in. Most tasks are created by
     // the person who is about to do them, and a default that is right most of
     // the time is worth more than an empty field that is never wrong.
-    _assigneeId = task?.assigneeId ?? SessionRepository.instance.currentUser?.id;
+    _assigneeId =
+        task?.assigneeId ?? SessionRepository.instance.currentUser?.id;
 
     // A week out: long enough to be plausible, short enough that leaving it
     // unchanged is not an obviously fake deadline.
-    _dueDate = task?.dueDate ??
+    _dueDate =
+        task?.dueDate ??
         Task.dateOnly(DateTime.now().add(const Duration(days: 7)));
 
     _priority = task?.priority ?? TaskPriority.medium;
     _status = task?.status ?? TaskStatus.todo;
+
+    for (final controller in [_titleController, _descriptionController]) {
+      controller.addListener(_markDirty);
+    }
+  }
+
+  void _markDirty() {
+    if (!_isDirty) setState(() => _isDirty = true);
+  }
+
+  /// Guards the back gesture. Blocking the pop only while the form is dirty
+  /// keeps the common case - open it, change your mind, close it - entirely
+  /// friction free.
+  Future<void> _handlePop(bool didPop, Object? result) async {
+    if (didPop || !_isDirty) return;
+
+    final discard = await AppFeedback.confirm(
+      context,
+      title: 'Discard changes?',
+      message: 'This task has edits that have not been saved yet.',
+      confirmLabel: 'Discard',
+    );
+
+    if (discard && mounted) Navigator.of(context).pop(false);
   }
 
   Future<void> _save() async {
@@ -147,7 +177,9 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
             updatedAt: now,
             // Reopening a finished task has to clear the completion stamp,
             // or the statistics keep counting it as delivered.
-            completedAt: _status.isComplete ? (existing.completedAt ?? now) : null,
+            completedAt: _status.isComplete
+                ? (existing.completedAt ?? now)
+                : null,
             clearCompletedAt: !_status.isComplete,
           );
 
@@ -189,14 +221,18 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
     setState(() {
       _dueDate = Task.dateOnly(picked);
       _dueDateError = null;
+      _isDirty = true;
     });
   }
 
   @override
   void dispose() {
     // Controllers hold native resources; not disposing them leaks.
-    _titleController.dispose();
-    _descriptionController.dispose();
+    for (final controller in [_titleController, _descriptionController]) {
+      controller
+        ..removeListener(_markDirty)
+        ..dispose();
+    }
     super.dispose();
   }
 
@@ -204,146 +240,166 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
 
-    return Scaffold(
-      backgroundColor: c.canvas,
-      appBar: AppBar(
-        title: Text(_isEditing ? 'Edit task' : 'New task'),
-        leading: IconButton(
-          icon: const Icon(Icons.close_rounded),
-          tooltip: 'Cancel',
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-      ),
-      body: Form(
-        key: _formKey,
-        // Validate once a field has been touched, so feedback arrives while
-        // the user is still in the field rather than after they press save.
-        autovalidateMode: AutovalidateMode.onUserInteraction,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.screenPadding,
-            AppSpacing.md,
-            AppSpacing.screenPadding,
-            AppSpacing.xxl,
+    return PopScope(
+      canPop: !_isDirty,
+      onPopInvokedWithResult: _handlePop,
+      child: Scaffold(
+        backgroundColor: c.canvas,
+        appBar: AppBar(
+          title: Text(_isEditing ? 'Edit task' : 'New task'),
+          leading: IconButton(
+            icon: const Icon(Icons.close_rounded),
+            tooltip: 'Cancel',
+            onPressed: () => Navigator.of(context).maybePop(),
           ),
-          children: [
-            const _FieldLabel(label: 'Title', isRequired: true),
-            TextFormField(
-              controller: _titleController,
-              textCapitalization: TextCapitalization.sentences,
-              textInputAction: TextInputAction.next,
-              maxLength: Validators.titleMaxLength,
-              // The character counter is noise until you are near the limit,
-              // and the validator already explains the rule when you hit it.
-              buildCounter: (_, {required currentLength, required isFocused,
-                      maxLength}) =>
-                  null,
-              decoration: const InputDecoration(
-                hintText: 'What needs to be done?',
-              ),
-              validator: Validators.taskTitle,
+        ),
+        body: Form(
+          key: _formKey,
+          // Validate once a field has been touched, so feedback arrives while
+          // the user is still in the field rather than after they press save.
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.screenPadding,
+              AppSpacing.md,
+              AppSpacing.screenPadding,
+              AppSpacing.xxl,
             ),
-            const SizedBox(height: AppSpacing.lg),
+            children: [
+              const _FieldLabel(label: 'Title', isRequired: true),
+              TextFormField(
+                controller: _titleController,
+                textCapitalization: TextCapitalization.sentences,
+                textInputAction: TextInputAction.next,
+                maxLength: Validators.titleMaxLength,
+                // The character counter is noise until you are near the limit,
+                // and the validator already explains the rule when you hit it.
+                buildCounter: (
+                  _, {
+                  required currentLength,
+                  required isFocused,
+                  maxLength,
+                }) => null,
+                decoration: const InputDecoration(
+                  hintText: 'What needs to be done?',
+                ),
+                validator: Validators.taskTitle,
+              ),
+              const SizedBox(height: AppSpacing.lg),
 
-            const _FieldLabel(label: 'Description'),
-            TextFormField(
-              controller: _descriptionController,
-              textCapitalization: TextCapitalization.sentences,
-              minLines: 3,
-              maxLines: 5,
-              decoration: const InputDecoration(
-                hintText: 'Add the detail somebody else would need to pick '
-                    'this up.',
+              const _FieldLabel(label: 'Description'),
+              TextFormField(
+                controller: _descriptionController,
+                textCapitalization: TextCapitalization.sentences,
+                minLines: 3,
+                maxLines: 5,
+                decoration: const InputDecoration(
+                  hintText:
+                      'Add the detail somebody else would need to pick '
+                      'this up.',
+                ),
+                validator: Validators.taskDescription,
               ),
-              validator: Validators.taskDescription,
-            ),
-            const _FieldLabel(label: 'Category', isRequired: true),
-            DropdownButtonFormField<String>(
-              initialValue: _category,
-              isExpanded: true,
-              decoration: const InputDecoration(hintText: 'Pick a category'),
-              items: [
-                for (final category in _categories)
-                  DropdownMenuItem(
-                    value: category,
-                    child: Text(category, style: AppTypography.caption),
-                  ),
-              ],
-              onChanged: (value) => setState(() => _category = value),
-              validator: Validators.category,
-            ),
-            const _FieldLabel(label: 'Assign to', isRequired: true),
-            DropdownButtonFormField<String>(
-              initialValue: _assigneeId,
-              isExpanded: true,
-              decoration: const InputDecoration(
-                hintText: 'Select a team member',
-              ),
-              items: [
-                for (final member in MemberRepository.instance.all)
-                  DropdownMenuItem(
-                    value: member.id,
-                    child: Row(
-                      children: [
-                        MemberAvatar(member: member, size: 22),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(
-                          child: Text(
-                            '${member.name} - ${member.role}',
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTypography.caption,
-                          ),
-                        ),
-                      ],
+              const _FieldLabel(label: 'Category', isRequired: true),
+              DropdownButtonFormField<String>(
+                initialValue: _category,
+                isExpanded: true,
+                decoration: const InputDecoration(hintText: 'Pick a category'),
+                items: [
+                  for (final category in _categories)
+                    DropdownMenuItem(
+                      value: category,
+                      child: Text(category, style: AppTypography.caption),
                     ),
-                  ),
-              ],
-              onChanged: (value) => setState(() => _assigneeId = value),
-              validator: Validators.assignee,
-            ),
-            const _FieldLabel(label: 'Due date', isRequired: true),
-            _DueDateField(
-              value: _dueDate,
-              errorText: _dueDateError,
-              onTap: _pickDueDate,
-            ),
-            const _FieldLabel(label: 'Priority'),
-            _PrioritySelector(
-              value: _priority,
-              onChanged: (value) => setState(() => _priority = value),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              'Priority also decides how early the SLA flags this task: '
-              'urgent work is marked At Risk sooner than low priority work.',
-              style: AppTypography.caption.copyWith(color: c.textTertiary),
-            ),
-            const SizedBox(height: AppSpacing.lg),
+                ],
+                onChanged: (value) => setState(() {
+                  _category = value;
+                  _isDirty = true;
+                }),
+                validator: Validators.category,
+              ),
+              const _FieldLabel(label: 'Assign to', isRequired: true),
+              DropdownButtonFormField<String>(
+                initialValue: _assigneeId,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  hintText: 'Select a team member',
+                ),
+                items: [
+                  for (final member in MemberRepository.instance.all)
+                    DropdownMenuItem(
+                      value: member.id,
+                      child: Row(
+                        children: [
+                          MemberAvatar(member: member, size: 22),
+                          const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: Text(
+                              '${member.name} - ${member.role}',
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTypography.caption,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+                onChanged: (value) => setState(() {
+                  _assigneeId = value;
+                  _isDirty = true;
+                }),
+                validator: Validators.assignee,
+              ),
+              const _FieldLabel(label: 'Due date', isRequired: true),
+              _DueDateField(
+                value: _dueDate,
+                errorText: _dueDateError,
+                onTap: _pickDueDate,
+              ),
+              const _FieldLabel(label: 'Priority'),
+              _PrioritySelector(
+                value: _priority,
+                onChanged: (value) => setState(() {
+                  _priority = value;
+                  _isDirty = true;
+                }),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                'Priority also decides how early the SLA flags this task: '
+                'urgent work is marked At Risk sooner than low priority work.',
+                style: AppTypography.caption.copyWith(color: c.textTertiary),
+              ),
+              const SizedBox(height: AppSpacing.lg),
 
-            const _FieldLabel(label: 'Status'),
-            DropdownButtonFormField<TaskStatus>(
-              initialValue: _status,
-              isExpanded: true,
-              items: [
-                for (final status in TaskStatus.values)
-                  DropdownMenuItem(
-                    value: status,
-                    child: Text(status.label, style: AppTypography.caption),
-                  ),
-              ],
-              onChanged: (value) {
-                if (value == null) return;
-                setState(() => _status = value);
-              },
-            ),
-            const SizedBox(height: AppSpacing.xxl),
+              const _FieldLabel(label: 'Status'),
+              DropdownButtonFormField<TaskStatus>(
+                initialValue: _status,
+                isExpanded: true,
+                items: [
+                  for (final status in TaskStatus.values)
+                    DropdownMenuItem(
+                      value: status,
+                      child: Text(status.label, style: AppTypography.caption),
+                    ),
+                ],
+                onChanged: (value) {
+                  if (value == null) return;
+                  setState(() {
+                    _status = value;
+                    _isDirty = true;
+                  });
+                },
+              ),
+              const SizedBox(height: AppSpacing.xxl),
 
-            PrimaryButton(
-              label: _isEditing ? 'Save changes' : 'Create task',
-              isLoading: _isSaving,
-              onPressed: _save,
-            ),
-          ],
+              PrimaryButton(
+                label: _isEditing ? 'Save changes' : 'Create task',
+                isLoading: _isSaving,
+                onPressed: _save,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -369,8 +425,7 @@ class _PrioritySelector extends StatelessWidget {
           Expanded(
             child: Padding(
               padding: EdgeInsets.only(
-                right:
-                    priority == TaskPriority.values.last ? 0 : AppSpacing.sm,
+                right: priority == TaskPriority.values.last ? 0 : AppSpacing.sm,
               ),
               child: _PriorityOption(
                 priority: priority,
@@ -414,9 +469,7 @@ class _PriorityOption extends StatelessWidget {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppRadius.md),
-            border: Border.all(
-              color: selected ? pair.foreground : c.border,
-            ),
+            border: Border.all(color: selected ? pair.foreground : c.border),
           ),
           child: Text(
             priority.label,
