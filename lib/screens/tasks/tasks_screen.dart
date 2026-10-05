@@ -8,8 +8,10 @@ import '../../repositories/task_repository.dart';
 import '../../models/sla_status.dart';
 import '../../models/task_status.dart';
 import '../../services/sla_service.dart';
+import '../../services/storage_service.dart';
 import '../../services/task_query.dart';
 import '../../widgets/common/app_buttons.dart';
+import '../../widgets/common/app_feedback.dart';
 import '../../widgets/common/empty_state.dart';
 import 'widgets/sla_filter_bar.dart';
 import 'widgets/task_row.dart';
@@ -61,10 +63,23 @@ class _TasksScreenState extends State<TasksScreen> {
     if (task == null) return;
 
     final next = task.status.isComplete ? TaskStatus.todo : TaskStatus.done;
-    await TaskRepository.instance.updateStatus(taskId, next);
 
-    if (!mounted) return;
-    setState(() {});
+    try {
+      await TaskRepository.instance.updateStatus(taskId, next);
+      if (!mounted) return;
+      setState(() {});
+      AppFeedback.showSuccess(
+        context,
+        next.isComplete
+            ? 'Completed "${task.title}".'
+            : 'Reopened "${task.title}".',
+      );
+    } on StorageException catch (error) {
+      // A failed write must not look like a success. The row is already
+      // correct - it was never changed - so all that is needed is to say so.
+      if (!mounted) return;
+      AppFeedback.showError(context, error.message);
+    }
   }
 
   void _setSlaFilter(SlaStatus? status) {
