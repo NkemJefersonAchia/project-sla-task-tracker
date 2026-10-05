@@ -6,6 +6,7 @@ import '../../core/theme/app_typography.dart';
 import '../../core/theme/status_colors.dart';
 import '../../core/utils/date_formatting.dart';
 import '../../models/sla_status.dart';
+import '../../models/task.dart';
 import '../../models/task_status.dart';
 import '../../repositories/member_repository.dart';
 import '../../repositories/task_repository.dart';
@@ -34,6 +35,46 @@ class TaskDetailScreen extends StatefulWidget {
 }
 
 class _TaskDetailScreenState extends State<TaskDetailScreen> {
+  late final TextEditingController _notesController;
+
+  /// True while the field differs from what is stored. It is what enables the
+  /// Save action, so an untouched field offers nothing to press.
+  bool _notesDirty = false;
+
+  bool _isSavingNotes = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final task = TaskRepository.instance.byId(widget.taskId);
+    _notesController = TextEditingController(text: task?.notes ?? '');
+  }
+
+  @override
+  void dispose() {
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveNotes(Task task) async {
+    setState(() => _isSavingNotes = true);
+    try {
+      await TaskRepository.instance.save(
+        task.copyWith(notes: _notesController.text.trim()),
+      );
+      if (!mounted) return;
+      setState(() {
+        _notesDirty = false;
+        _isSavingNotes = false;
+      });
+      AppFeedback.showSuccess(context, 'Notes saved.');
+    } on StorageException catch (error) {
+      if (!mounted) return;
+      setState(() => _isSavingNotes = false);
+      AppFeedback.showError(context, error.message);
+    }
+  }
+
   Future<void> _changeStatus(TaskStatus status) async {
     try {
       await TaskRepository.instance.updateStatus(widget.taskId, status);
@@ -160,6 +201,33 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
           SectionHeader(title: 'SLA status'),
           _SlaCard(evaluation: sla),
+          const SizedBox(height: AppSpacing.xl),
+
+          SectionHeader(
+            title: 'Notes',
+            // The Save action only appears once there is something to save.
+            action: _notesDirty
+                ? SectionAction(
+                    label: _isSavingNotes ? 'Saving' : 'Save',
+                    onPressed: () => _saveNotes(task),
+                  )
+                : null,
+          ),
+          TextField(
+            controller: _notesController,
+            minLines: 3,
+            maxLines: 6,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(
+              hintText: 'Add context, a blocker, or a handover note',
+            ),
+            onChanged: (value) {
+              // Only rebuild when the dirty flag actually flips, rather than
+              // on every keystroke.
+              final dirty = value.trim() != task.notes.trim();
+              if (dirty != _notesDirty) setState(() => _notesDirty = dirty);
+            },
+          ),
         ],
       ),
     );
