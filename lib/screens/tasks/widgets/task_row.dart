@@ -47,6 +47,7 @@ class TaskRow extends StatelessWidget {
     // never stored, so a row that was yellow yesterday turns red today
     // without anybody editing the data.
     final sla = SlaService.statusOf(task);
+    final isDone = task.status.isComplete;
 
     return AppCard(
       onTap: onTap,
@@ -59,7 +60,7 @@ class TaskRow extends StatelessWidget {
         children: [
           if (onToggleComplete != null) ...[
             _CompletionBox(
-              isDone: task.status.isComplete,
+              isDone: isDone,
               onTap: onToggleComplete!,
             ),
             const SizedBox(width: AppSpacing.md),
@@ -77,7 +78,13 @@ class TaskRow extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: AppTypography.bodyStrong.copyWith(
-                          color: c.textPrimary,
+                          // Finished work recedes: lighter text with a rule
+                          // through it, so a done row is legible but stops
+                          // competing for attention.
+                          color: isDone ? c.textTertiary : c.textPrimary,
+                          decoration:
+                              isDone ? TextDecoration.lineThrough : null,
+                          decorationColor: c.textTertiary,
                         ),
                       ),
                     ),
