@@ -12,6 +12,7 @@ import '../../repositories/member_repository.dart';
 import '../../repositories/task_repository.dart';
 import '../../services/sla_service.dart';
 import '../../services/storage_service.dart';
+import '../../widgets/common/app_buttons.dart';
 import '../../widgets/common/app_card.dart';
 import '../../widgets/common/app_feedback.dart';
 import '../../widgets/common/section_header.dart';
@@ -113,8 +114,14 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
     final task = TaskRepository.instance.byId(widget.taskId);
-    final assignee = MemberRepository.instance.byId(task?.assigneeId);
-    final sla = task == null ? null : SlaService.evaluate(task);
+
+    // The task can genuinely be gone - deleted from this screen a frame ago,
+    // or from somewhere else entirely. Returning a real screen beats a
+    // force-unwrap that crashes on a case the app is expected to produce.
+    if (task == null) return const _MissingTaskScreen();
+
+    final assignee = MemberRepository.instance.byId(task.assigneeId);
+    final sla = SlaService.evaluate(task);
 
     return Scaffold(
       backgroundColor: c.canvas,
@@ -125,7 +132,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             icon: const Icon(Icons.more_horiz_rounded),
             tooltip: 'Task actions',
             onSelected: (value) {
-              if (value == 'delete') _delete(task!);
+              if (value == 'delete') _delete(task);
             },
             itemBuilder: (context) => [
               PopupMenuItem(
@@ -144,7 +151,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           AppSpacing.xxl,
         ),
         children: [
-          if (task!.category.isNotEmpty) ...[
+          if (task.category.isNotEmpty) ...[
             // The category sits above the title as a quiet label rather than
             // beside it - the same place Notion puts a page's parent.
             ToneBadge(
@@ -207,7 +214,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                   // is unambiguous, the other is the one you actually act on.
                   DateFormatting.relativeDueDate(task.dueDate),
                   style: AppTypography.caption.copyWith(
-                    color: sla!.status == SlaStatus.overdue
+                    color: sla.status == SlaStatus.overdue
                         ? c.red
                         : c.textTertiary,
                   ),
@@ -268,6 +275,43 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             },
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Shown when the task behind this route no longer exists.
+///
+/// Reached by deleting the task and by a stale route - for example if the
+/// screen is still on the stack when the task is removed elsewhere.
+class _MissingTaskScreen extends StatelessWidget {
+  const _MissingTaskScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Task')),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.search_off_rounded, size: 28),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'This task no longer exists.',
+                style: AppTypography.bodyStrong,
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              SecondaryButton(
+                label: 'Back to tasks',
+                expand: false,
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
