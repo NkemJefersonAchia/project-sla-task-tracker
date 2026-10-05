@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/constants/app_routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
@@ -76,6 +77,16 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     }
   }
 
+  Future<void> _edit() async {
+    final saved = await Navigator.of(context).pushNamed<bool>(
+      AppRoutes.taskForm,
+      arguments: TaskFormArgs.edit(widget.taskId),
+    );
+    // No need to merge anything back: the screen re-reads the task from the
+    // repository on rebuild, so setState is the whole refresh.
+    if (saved == true && mounted) setState(() {});
+  }
+
   Future<void> _delete(Task task) async {
     final confirmed = await AppFeedback.confirm(
       context,
@@ -132,9 +143,11 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             icon: const Icon(Icons.more_horiz_rounded),
             tooltip: 'Task actions',
             onSelected: (value) {
+              if (value == 'edit') _edit();
               if (value == 'delete') _delete(task);
             },
             itemBuilder: (context) => [
+              const PopupMenuItem(value: 'edit', child: Text('Edit task')),
               PopupMenuItem(
                 value: 'delete',
                 child: Text('Delete task', style: TextStyle(color: c.red)),

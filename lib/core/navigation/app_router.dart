@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../screens/home_shell.dart';
 import '../../screens/tasks/task_detail_screen.dart';
+import '../../screens/tasks/task_form_screen.dart';
 import '../constants/app_routes.dart';
 
 /// Turns a route name into a screen.
@@ -27,6 +28,18 @@ abstract final class AppRouter {
         final args = _requireArgs<TaskDetailArgs>(settings);
         // Pops `true` when the task was deleted, so the list behind re-reads.
         return _page<bool>(TaskDetailScreen(taskId: args.taskId), settings);
+
+      case AppRoutes.taskForm:
+        final args = _requireArgs<TaskFormArgs>(settings);
+        // Pops `true` when a task was created or updated.
+        return _page<bool>(
+          TaskFormScreen(taskId: args.taskId),
+          settings,
+          // Arrives from the bottom with a close button rather than a back
+          // arrow: this is a job you either finish or abandon, not a place
+          // you browse to.
+          fullscreenDialog: true,
+        );
 
       default:
         return _page<Object?>(
