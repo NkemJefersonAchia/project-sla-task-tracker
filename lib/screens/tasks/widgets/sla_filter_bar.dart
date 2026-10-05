@@ -13,16 +13,22 @@ class SlaFilterBar extends StatelessWidget {
   const SlaFilterBar({
     super.key,
     required this.selected,
+    required this.counts,
     required this.onSelected,
   });
 
   /// Null means "All".
   final SlaStatus? selected;
 
+  /// How many tasks sit in each state, from `SlaService.summarise`.
+  final Map<SlaStatus, int> counts;
+
   final ValueChanged<SlaStatus?> onSelected;
 
   @override
   Widget build(BuildContext context) {
+    final total = counts.values.fold(0, (sum, value) => sum + value);
+
     return SizedBox(
       height: 38,
       child: ListView(
@@ -33,12 +39,14 @@ class SlaFilterBar extends StatelessWidget {
         children: [
           _Chip(
             label: 'All',
+            count: total,
             selected: selected == null,
             onTap: () => onSelected(null),
           ),
           for (final status in SlaStatus.values)
             _Chip(
               label: status.label,
+              count: counts[status] ?? 0,
               selected: selected == status,
               onTap: () => onSelected(status),
             ),
@@ -57,11 +65,13 @@ class SlaFilterBar extends StatelessWidget {
 class _Chip extends StatelessWidget {
   const _Chip({
     required this.label,
+    required this.count,
     required this.selected,
     required this.onTap,
   });
 
   final String label;
+  final int count;
   final bool selected;
   final VoidCallback onTap;
 
@@ -87,12 +97,24 @@ class _Chip extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppRadius.md),
               border: Border.all(color: selected ? c.textPrimary : c.border),
             ),
-            child: Text(
-              label,
-              style: AppTypography.caption.copyWith(
-                color: selected ? c.canvas : c.textSecondary,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: AppTypography.caption.copyWith(
+                    color: selected ? c.canvas : c.textSecondary,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  '$count',
+                  style: AppTypography.badge.copyWith(
+                    color: selected ? c.canvas : c.textTertiary,
+                  ),
+                ),
+              ],
             ),
           ),
         ),

@@ -6,6 +6,7 @@ import '../../core/theme/app_typography.dart';
 import '../../repositories/member_repository.dart';
 import '../../repositories/task_repository.dart';
 import '../../models/sla_status.dart';
+import '../../services/sla_service.dart';
 import '../../services/task_query.dart';
 import 'widgets/sla_filter_bar.dart';
 import 'widgets/task_row.dart';
@@ -79,6 +80,10 @@ class _TasksScreenState extends State<TasksScreen> {
             const SizedBox(height: AppSpacing.md),
             SlaFilterBar(
               selected: _query.slaFilter,
+              // Counted from every task, not from the filtered list, so the
+              // numbers stay still while you move between chips. Same service
+              // the dashboard uses, so the two screens cannot disagree.
+              counts: SlaService.summarise(allTasks),
               onSelected: _setSlaFilter,
             ),
             const SizedBox(height: AppSpacing.sm),
