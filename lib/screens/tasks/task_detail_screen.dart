@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
+import '../../core/theme/status_colors.dart';
 import '../../repositories/task_repository.dart';
+import '../../widgets/task/sla_badge.dart';
 
 /// Everything about one task.
 ///
@@ -37,10 +39,26 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           AppSpacing.xxl,
         ),
         children: [
+          if (task!.category.isNotEmpty) ...[
+            // The category sits above the title as a quiet label rather than
+            // beside it - the same place Notion puts a page's parent.
+            ToneBadge(
+              label: task.category,
+              pair: ColorPair(c.textSecondary, c.surfaceMuted),
+            ),
+            const SizedBox(height: AppSpacing.md),
+          ],
           Text(
-            task?.title ?? '',
+            task.title,
             style: AppTypography.pageTitle.copyWith(color: c.textPrimary),
           ),
+          if (task.description.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              task.description,
+              style: AppTypography.body.copyWith(color: c.textSecondary),
+            ),
+          ],
         ],
       ),
     );
