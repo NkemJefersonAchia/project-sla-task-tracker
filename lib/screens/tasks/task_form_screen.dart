@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/theme/app_typography.dart';
+import '../../core/utils/validators.dart';
+import '../../models/task.dart';
+import '../../repositories/task_repository.dart';
 import '../../widgets/common/app_buttons.dart';
 
 /// Create or edit a task.
@@ -28,7 +32,31 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
   /// rather than making the user fix one problem per attempt.
   final _formKey = GlobalKey<FormState>();
 
+  late final TextEditingController _titleController;
+  late final TextEditingController _descriptionController;
+
   bool get _isEditing => widget.taskId != null;
+
+  Task? get _existingTask => widget.taskId == null
+      ? null
+      : TaskRepository.instance.byId(widget.taskId!);
+
+  @override
+  void initState() {
+    super.initState();
+    final task = _existingTask;
+    _titleController = TextEditingController(text: task?.title ?? '');
+    _descriptionController =
+        TextEditingController(text: task?.description ?? '');
+  }
+
+  @override
+  void dispose() {
+    // Controllers hold native resources; not disposing them leaks.
+    _titleController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,12 +85,79 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
             AppSpacing.xxl,
           ),
           children: [
+            const _FieldLabel(label: 'Title', isRequired: true),
+            TextFormField(
+              controller: _titleController,
+              textCapitalization: TextCapitalization.sentences,
+              textInputAction: TextInputAction.next,
+              maxLength: Validators.titleMaxLength,
+              // The character counter is noise until you are near the limit,
+              // and the validator already explains the rule when you hit it.
+              buildCounter: (_, {required currentLength, required isFocused,
+                      maxLength}) =>
+                  null,
+              decoration: const InputDecoration(
+                hintText: 'What needs to be done?',
+              ),
+              validator: Validators.taskTitle,
+            ),
+            const SizedBox(height: AppSpacing.lg),
+
+            const _FieldLabel(label: 'Description'),
+            TextFormField(
+              controller: _descriptionController,
+              textCapitalization: TextCapitalization.sentences,
+              minLines: 3,
+              maxLines: 5,
+              decoration: const InputDecoration(
+                hintText: 'Add the detail somebody else would need to pick '
+                    'this up.',
+              ),
+              validator: Validators.taskDescription,
+            ),
+            const SizedBox(height: AppSpacing.xxl),
+
             PrimaryButton(
               label: _isEditing ? 'Save changes' : 'Create task',
               onPressed: () {},
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// A small grey label above a field, with a red asterisk when the field is
+/// required.
+///
+/// Flutter's floating label animates into the field's border, which looks
+/// busy in a long form and leaves the field ambiguous while it is empty. A
+/// static label above the input stays readable in both states.
+class _FieldLabel extends StatelessWidget {
+  const _FieldLabel({required this.label, this.isRequired = false});
+
+  final String label;
+  final bool isRequired;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Row(
+        children: [
+          Text(
+            label,
+            style: AppTypography.caption.copyWith(
+              color: c.textSecondary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          if (isRequired)
+            Text(' *', style: AppTypography.caption.copyWith(color: c.red)),
+        ],
       ),
     );
   }
