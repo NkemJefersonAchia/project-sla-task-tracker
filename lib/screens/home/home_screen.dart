@@ -3,9 +3,14 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
+import '../../core/theme/status_colors.dart';
 import '../../core/utils/date_formatting.dart';
+import '../../models/sla_status.dart';
 import '../../repositories/session_repository.dart';
+import '../../repositories/task_repository.dart';
+import '../../services/sla_service.dart';
 import '../../widgets/common/member_avatar.dart';
+import 'widgets/metric_tile.dart';
 
 /// The Home tab: the dashboard.
 ///
@@ -25,6 +30,12 @@ class _HomeScreenState extends State<HomeScreen> {
     final c = AppColors.of(context);
     final me = SessionRepository.instance.currentUser;
 
+    // Read straight from the repository on every build. The counts are
+    // derived, never stored, so completing a task on another tab moves them
+    // without this screen being told anything.
+    final tasks = TaskRepository.instance.all;
+    final counts = SlaService.summarise(tasks);
+
     return Scaffold(
       backgroundColor: c.canvas,
       body: SafeArea(
@@ -41,8 +52,78 @@ class _HomeScreenState extends State<HomeScreen> {
               role: me?.role ?? '',
               avatar: MemberAvatar(member: me, size: 38),
             ),
+            const SizedBox(height: AppSpacing.xl),
+            _MetricGrid(total: tasks.length, counts: counts),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// The 2x2 block of counters.
+///
+/// Two plain Rows rather than a GridView, which would need its own scroll
+/// handling inside the page's ListView. Each row is wrapped in an
+/// IntrinsicHeight so its two tiles match height - `CrossAxisAlignment.stretch`
+/// alone cannot do that here, because a ListView gives its children unbounded
+/// vertical space and stretching to infinity throws.
+class _MetricGrid extends StatelessWidget {
+  const _MetricGrid({required this.total, required this.counts});
+
+  final int total;
+  final Map<SlaStatus, int> counts;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+
+    final tiles = <Widget>[
+      MetricTile(
+        value: total,
+        label: 'Total tasks',
+        icon: Icons.layers_outlined,
+        pair: ColorPair(c.textPrimary, c.surfaceMuted),
+      ),
+      for (final status in [
+        SlaStatus.onTrack,
+        SlaStatus.atRisk,
+        SlaStatus.overdue,
+      ])
+        MetricTile(
+          value: counts[status] ?? 0,
+          label: status.label,
+          icon: StatusColors.iconForSla(status),
+          pair: StatusColors.forSla(context, status),
+        ),
+    ];
+
+    return Column(
+      children: [
+        _MetricRow(left: tiles[0], right: tiles[1]),
+        const SizedBox(height: AppSpacing.md),
+        _MetricRow(left: tiles[2], right: tiles[3]),
+      ],
+    );
+  }
+}
+
+class _MetricRow extends StatelessWidget {
+  const _MetricRow({required this.left, required this.right});
+
+  final Widget left;
+  final Widget right;
+
+  @override
+  Widget build(BuildContext context) {
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(child: left),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(child: right),
+        ],
       ),
     );
   }
