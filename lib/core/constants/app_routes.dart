@@ -17,13 +17,15 @@ abstract final class AppRoutes {
   /// The shell that holds the four bottom-navigation tabs.
   static const String home = '/';
 
+  /// Sign-in and account creation.
+  static const String login = '/login';
+  static const String signUp = '/sign-up';
+
   /// One task in full. Takes a [TaskDetailArgs].
   static const String taskDetail = '/task/detail';
 
   /// Create or edit a task. Takes a [TaskFormArgs]; a null id means create.
   static const String taskForm = '/task/form';
-
-  // The welcome / sign-in route goes here when that screen exists.
 }
 
 /// Arguments for [AppRoutes.taskDetail].

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../screens/auth/login_screen.dart';
+import '../../screens/auth/sign_up_screen.dart';
 import '../../screens/home_shell.dart';
 import '../../screens/tasks/task_detail_screen.dart';
 import '../../screens/tasks/task_form_screen.dart';
@@ -23,6 +25,12 @@ abstract final class AppRouter {
     switch (settings.name) {
       case AppRoutes.home:
         return _page<Object?>(const HomeShell(), settings);
+
+      case AppRoutes.login:
+        return _page<Object?>(const LoginScreen(), settings);
+
+      case AppRoutes.signUp:
+        return _page<Object?>(const SignUpScreen(), settings);
 
       case AppRoutes.taskDetail:
         final args = _requireArgs<TaskDetailArgs>(settings);
