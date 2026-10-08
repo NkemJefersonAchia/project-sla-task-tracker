@@ -6,6 +6,8 @@ import '../../core/theme/app_typography.dart';
 import '../../core/theme/status_colors.dart';
 import '../../core/utils/date_formatting.dart';
 import '../../models/sla_status.dart';
+import '../../core/constants/app_routes.dart';
+import '../../repositories/member_repository.dart';
 import '../../repositories/session_repository.dart';
 import '../../repositories/task_repository.dart';
 import '../../services/sla_service.dart';
@@ -14,6 +16,7 @@ import '../../widgets/common/member_avatar.dart';
 import '../../widgets/common/section_header.dart';
 import 'widgets/deadline_histogram.dart';
 import 'widgets/metric_tile.dart';
+import '../tasks/widgets/task_row.dart';
 import 'widgets/sla_ring_chart.dart';
 
 /// The Home tab: the dashboard.
@@ -29,6 +32,19 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  /// How many rows the attention list shows before deferring to the Tasks
+  /// tab. This is a summary; a fifth row would make it a second task list.
+  static const int _previewCount = 3;
+
+  Future<void> _openTask(String taskId) async {
+    await Navigator.of(context).pushNamed(
+      AppRoutes.taskDetail,
+      arguments: TaskDetailArgs(taskId),
+    );
+    // The detail screen can edit or delete, so re-read on the way back.
+    if (mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
@@ -39,6 +55,11 @@ class _HomeScreenState extends State<HomeScreen> {
     // without this screen being told anything.
     final tasks = TaskRepository.instance.all;
     final counts = SlaService.summarise(tasks);
+
+    // Overdue and at-risk work, soonest deadline first.
+    final needsAttention =
+        tasks.where((t) => SlaService.statusOf(t).needsAttention).toList()
+          ..sort((a, b) => a.dueDate.compareTo(b.dueDate));
 
     return Scaffold(
       backgroundColor: c.canvas,
@@ -64,6 +85,36 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: AppSpacing.xl),
             SectionHeader(title: 'The next two weeks'),
             AppCard(child: DeadlineHistogram(tasks: tasks)),
+            const SizedBox(height: AppSpacing.xl),
+            SectionHeader(title: 'Needs attention (${needsAttention.length})'),
+            if (needsAttention.isEmpty)
+              AppCard(
+                child: Row(
+                  children: [
+                    Icon(Icons.verified_outlined, size: 18, color: c.green),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Text(
+                        'Nothing is overdue or at risk. The whole board is on '
+                        'schedule.',
+                        style: AppTypography.caption.copyWith(
+                          color: c.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              for (final task in needsAttention.take(_previewCount))
+                Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: TaskRow(
+                    task: task,
+                    assignee: MemberRepository.instance.byId(task.assigneeId),
+                    onTap: () => _openTask(task.id),
+                  ),
+                ),
           ],
         ),
       ),
