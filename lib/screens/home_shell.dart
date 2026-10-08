@@ -8,6 +8,8 @@ import 'profile/profile_screen.dart';
 import 'tasks/tasks_screen.dart';
 import 'team/team_screen.dart';
 
+import '../core/navigation/tasks_filter_bridge.dart';
+import '../models/sla_status.dart';
 /// The container that holds the four tabs behind one bottom bar.
 ///
 /// ## Shared file - change it as little as you can
@@ -37,6 +39,11 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   int _currentIndex = 0;
+
+  void _openTasks(SlaStatus? filter) {
+    TasksFilterBridge.request(filter);
+    setState(() => _currentIndex = 1); // the Tasks tab
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -68,11 +75,11 @@ class _HomeShellState extends State<HomeShell> {
         index: _currentIndex,
         // Replace your own line here with your real screen, and leave the
         // other three alone.
-        children: const [
-          HomeScreen(),
-          TasksScreen(),
-          TeamScreen(),
-          ProfileScreen(),
+        children: [
+          HomeScreen(onOpenTasks: _openTasks),
+          const TasksScreen(),
+          const TeamScreen(),
+          const ProfileScreen(),
         ],
       ),
       bottomNavigationBar: _BottomBar(
