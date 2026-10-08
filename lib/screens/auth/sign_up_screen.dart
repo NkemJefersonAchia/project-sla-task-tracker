@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 
-import 'auth_service.dart';
+import '../../core/constants/app_routes.dart';
+import '../../core/utils/validators.dart';
+import '../../repositories/member_repository.dart';
+import '../../repositories/session_repository.dart';
 
-class SignUpPage extends StatefulWidget {
-  const SignUpPage({super.key});
+class SignUpScreen extends StatefulWidget {
+  const SignUpScreen({super.key});
 
   @override
-  State<SignUpPage> createState() => _SignUpPageState();
+  State<SignUpScreen> createState() => _SignUpScreenState();
 }
 
-class _SignUpPageState extends State<SignUpPage> {
+class _SignUpScreenState extends State<SignUpScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
@@ -36,25 +39,42 @@ class _SignUpPageState extends State<SignUpPage> {
     setState(() => _isLoading = true);
 
     try {
-      await AuthService.signUp(
-        _nameCtrl.text.trim(),
-        _emailCtrl.text.trim(),
-        _passCtrl.text,
+      final member = await MemberRepository.instance.register(
+        name: _nameCtrl.text,
+        email: _emailCtrl.text,
+        password: _passCtrl.text,
       );
-      if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Account created. Please sign in.')),
-      );
-      Navigator.of(context).pop(); // back to the login page
-    } catch (e) {
+      // Signing the new member in straight away saves them typing the same
+      // credentials again on the login screen.
+      await SessionRepository.instance.signIn(member);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        AppRoutes.home,
+        (_) => false,
       );
+    } on AuthException catch (e) {
+      _showMessage(e.message);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _showMessage(String text) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(text)));
+  }
+
+  String? _checkConfirm(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please confirm your password.';
+    }
+    if (value != _passCtrl.text) {
+      return 'Passwords do not match.';
+    }
+    return null;
   }
 
   OutlineInputBorder _border(Color color, [double width = 1]) {
@@ -83,43 +103,6 @@ class _SignUpPageState extends State<SignUpPage> {
       errorBorder: _border(theme.colorScheme.error),
       focusedErrorBorder: _border(theme.colorScheme.error, 2),
     );
-  }
-
-  String? _checkName(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Please enter your name';
-    }
-    return null;
-  }
-
-  String? _checkEmail(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Please enter your email';
-    }
-    if (!value.contains('@')) {
-      return 'Enter a valid email';
-    }
-    return null;
-  }
-
-  String? _checkPassword(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please enter a password';
-    }
-    if (value.length < 6) {
-      return 'At least 6 characters';
-    }
-    return null;
-  }
-
-  String? _checkConfirm(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please confirm your password';
-    }
-    if (value != _passCtrl.text) {
-      return 'Passwords do not match';
-    }
-    return null;
   }
 
   Widget _visibilityToggle(ThemeData theme, bool hidden, VoidCallback onTap) {
@@ -175,7 +158,7 @@ class _SignUpPageState extends State<SignUpPage> {
                   ),
                   const SizedBox(height: 32),
 
-                  // Full Name
+                  // Full name
                   TextFormField(
                     controller: _nameCtrl,
                     keyboardType: TextInputType.name,
@@ -186,7 +169,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       'Full name',
                       Icons.person_outline,
                     ),
-                    validator: _checkName,
+                    validator: Validators.personName,
                   ),
                   const SizedBox(height: 16),
 
@@ -195,12 +178,13 @@ class _SignUpPageState extends State<SignUpPage> {
                     controller: _emailCtrl,
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
+                    autocorrect: false,
                     decoration: _fieldStyle(
                       context,
                       'Email',
                       Icons.mail_outline,
                     ),
-                    validator: _checkEmail,
+                    validator: Validators.email,
                   ),
                   const SizedBox(height: 16),
 
@@ -219,11 +203,11 @@ class _SignUpPageState extends State<SignUpPage> {
                         () => setState(() => _hidePassword = !_hidePassword),
                       ),
                     ),
-                    validator: _checkPassword,
+                    validator: Validators.password,
                   ),
                   const SizedBox(height: 16),
 
-                  // Confirm Password
+                  // Confirm password
                   TextFormField(
                     controller: _confirmCtrl,
                     obscureText: _hideConfirm,
@@ -243,7 +227,7 @@ class _SignUpPageState extends State<SignUpPage> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Submit Button
+                  // Submit
                   SizedBox(
                     width: double.infinity,
                     height: 56,
@@ -274,7 +258,7 @@ class _SignUpPageState extends State<SignUpPage> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Bottom Sign-In Link
+                  // Sign-in link
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [

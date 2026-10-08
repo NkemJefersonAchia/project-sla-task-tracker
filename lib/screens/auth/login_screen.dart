@@ -1,18 +1,23 @@
 import 'package:flutter/material.dart';
-import 'sign_up.dart';
 
-class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+import '../../core/constants/app_routes.dart';
+import '../../core/utils/validators.dart';
+import '../../repositories/member_repository.dart';
+import '../../repositories/session_repository.dart';
+
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   bool _hidePassword = true;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -21,11 +26,42 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  void _submit() {
-    if (_formKey.currentState!.validate()) {
-      FocusScope.of(context).unfocus();
-      // TODO: Perform sign in action
+  Future<void> _submit() async {
+    if (_isLoading) return;
+    if (!_formKey.currentState!.validate()) return;
+    FocusScope.of(context).unfocus();
+
+    setState(() => _isLoading = true);
+
+    try {
+      final member = MemberRepository.instance.authenticate(
+        _emailCtrl.text,
+        _passCtrl.text,
+      );
+
+      if (member == null) {
+        // One message for both "unknown email" and "wrong password", so the
+        // screen never reveals which emails have accounts.
+        _showMessage('Incorrect email or password.');
+        return;
+      }
+
+      await SessionRepository.instance.signIn(member);
+      if (!mounted) return;
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        AppRoutes.home,
+        (_) => false,
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  void _showMessage(String text) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(text)));
   }
 
   OutlineInputBorder _border(Color color, [double width = 1]) {
@@ -56,26 +92,6 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  String? _checkEmail(String? value) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Please enter your email';
-    }
-    if (!value.contains('@')) {
-      return 'Enter a valid email';
-    }
-    return null;
-  }
-
-  String? _checkPassword(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please enter your password';
-    }
-    if (value.length < 6) {
-      return 'At least 6 characters';
-    }
-    return null;
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -90,7 +106,6 @@ class _LoginPageState extends State<LoginPage> {
               key: _formKey,
               child: Column(
                 children: [
-                  // App Logo / Icon Header using theme color
                   Icon(
                     Icons.lock_outline_rounded,
                     size: 80,
@@ -115,21 +130,22 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 32),
 
-                  // Email Field
+                  // Email
                   TextFormField(
                     controller: _emailCtrl,
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
+                    autocorrect: false,
                     decoration: _fieldStyle(
                       context,
                       'Email',
                       Icons.mail_outline,
                     ),
-                    validator: _checkEmail,
+                    validator: Validators.email,
                   ),
                   const SizedBox(height: 16),
 
-                  // Password Field
+                  // Password
                   TextFormField(
                     controller: _passCtrl,
                     obscureText: _hidePassword,
@@ -150,16 +166,16 @@ class _LoginPageState extends State<LoginPage> {
                             setState(() => _hidePassword = !_hidePassword),
                       ),
                     ),
-                    validator: _checkPassword,
+                    validator: Validators.password,
                   ),
                   const SizedBox(height: 24),
 
-                  // Sign In Button
+                  // Submit
                   SizedBox(
                     width: double.infinity,
                     height: 56,
                     child: ElevatedButton(
-                      onPressed: _submit,
+                      onPressed: _isLoading ? null : _submit,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: theme.colorScheme.primary,
                         foregroundColor: theme.colorScheme.onPrimary,
@@ -168,18 +184,24 @@ class _LoginPageState extends State<LoginPage> {
                           borderRadius: BorderRadius.circular(16),
                         ),
                       ),
-                      child: const Text(
-                        'Sign In',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: CircularProgressIndicator(strokeWidth: 2.5),
+                            )
+                          : const Text(
+                              'Sign In',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                     ),
                   ),
                   const SizedBox(height: 20),
 
-                  // Bottom Sign Up Row
+                  // Sign-up link
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -190,11 +212,8 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                       GestureDetector(
-                        onTap: () {
-                          Navigator.push(context,
-                          MaterialPageRoute(builder: (context) => const SignUpPage())
-                          );
-                        },
+                        onTap: () =>
+                            Navigator.of(context).pushNamed(AppRoutes.signUp),
                         child: Text(
                           'Sign Up',
                           style: TextStyle(
