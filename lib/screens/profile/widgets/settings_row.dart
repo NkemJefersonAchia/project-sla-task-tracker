@@ -16,6 +16,8 @@ class SettingsRow extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.trailingNote,
+    this.trailing,
+    this.showChevron = true,
     this.isLast = false,
   });
 
@@ -23,6 +25,8 @@ class SettingsRow extends StatelessWidget {
   final String label;
   final VoidCallback? onTap;
   final String? trailingNote;
+  final Widget? trailing;
+  final bool showChevron;
 
   /// Suppresses the bottom hairline so the last row sits flush with the card.
   final bool isLast;
@@ -57,18 +61,22 @@ class SettingsRow extends StatelessWidget {
                 style: AppTypography.body.copyWith(color: foreground),
               ),
             ),
-            if (trailingNote != null) ...[
+            if (trailing != null) ...[
+              trailing!,
+              const SizedBox(width: AppSpacing.sm),
+            ] else if (trailingNote != null) ...[
               Text(
                 trailingNote!,
                 style: AppTypography.caption.copyWith(color: c.textTertiary),
               ),
               const SizedBox(width: AppSpacing.sm),
             ],
-            Icon(
-              Icons.chevron_right_rounded,
-              size: 18,
-              color: enabled ? c.textTertiary : c.border,
-            ),
+            if (showChevron && trailing == null)
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 18,
+                color: enabled ? c.textTertiary : c.border,
+              ),
           ],
         ),
       ),
