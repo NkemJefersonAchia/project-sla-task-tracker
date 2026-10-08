@@ -31,10 +31,12 @@ class TasksScreen extends StatefulWidget {
   const TasksScreen({super.key});
 
   @override
-  State<TasksScreen> createState() => _TasksScreenState();
+  State<TasksScreen> createState() => TasksScreenState();
 }
 
-class _TasksScreenState extends State<TasksScreen> {
+/// Public so the shell can reach it through a GlobalKey when the dashboard
+/// asks for a filtered view. Every other State in the app stays private.
+class TasksScreenState extends State<TasksScreen> {
   final _searchController = TextEditingController();
 
   TaskQuery _query = const TaskQuery();
@@ -102,6 +104,9 @@ class _TasksScreenState extends State<TasksScreen> {
     );
     if (mounted) setState(() {});
   }
+
+  /// Called by the shell when a dashboard counter is tapped.
+  void applySlaFilter(SlaStatus? status) => _setSlaFilter(status);
 
   void _setSlaFilter(SlaStatus? status) {
     setState(() {

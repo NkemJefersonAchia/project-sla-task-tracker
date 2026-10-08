@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_spacing.dart';
 import '../core/theme/app_typography.dart';
+import '../models/sla_status.dart';
 import 'home/home_screen.dart';
 import 'profile/profile_screen.dart';
 import 'tasks/tasks_screen.dart';
@@ -43,8 +44,23 @@ class _HomeShellState extends State<HomeShell> {
   /// The repositories are shared and in memory, so rebuilding the shell is
   /// enough - editing your name on Profile updates the task rows on Tasks
   /// without either screen knowing about the other.
+  /// Lets the dashboard reach into the already-built task list and filter it.
+  /// A GlobalKey is the simplest way to call a method on a sibling tab's
+  /// State without pulling in a state-management package.
+  final _tasksKey = GlobalKey<TasksScreenState>();
+
   void _handleDataChanged() {
     if (mounted) setState(() {});
+  }
+
+  /// Switches to the Tasks tab and filters it, in one step.
+  void _openTasksFiltered(SlaStatus? status) {
+    setState(() => _currentIndex = 1);
+    // The tab may not have been built yet on a first switch, so the filter
+    // is applied once this frame has gone through.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _tasksKey.currentState?.applySlaFilter(status);
+    });
   }
 
   @override
@@ -78,8 +94,8 @@ class _HomeShellState extends State<HomeShell> {
         // Replace your own line here with your real screen, and leave the
         // other three alone.
         children: [
-          const HomeScreen(),
-          const TasksScreen(),
+          HomeScreen(onOpenTasks: _openTasksFiltered),
+          TasksScreen(key: _tasksKey),
           const TeamScreen(),
           ProfileScreen(onDataChanged: _handleDataChanged),
         ],
