@@ -9,8 +9,11 @@ import '../../models/sla_status.dart';
 import '../../repositories/session_repository.dart';
 import '../../repositories/task_repository.dart';
 import '../../services/sla_service.dart';
+import '../../widgets/common/app_card.dart';
 import '../../widgets/common/member_avatar.dart';
+import '../../widgets/common/section_header.dart';
 import 'widgets/metric_tile.dart';
+import 'widgets/sla_ring_chart.dart';
 
 /// The Home tab: the dashboard.
 ///
@@ -54,6 +57,9 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: AppSpacing.xl),
             _MetricGrid(total: tasks.length, counts: counts),
+            const SizedBox(height: AppSpacing.xl),
+            SectionHeader(title: 'Project health'),
+            AppCard(child: SlaRingChart(counts: counts)),
           ],
         ),
       ),
