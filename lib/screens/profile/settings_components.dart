@@ -97,3 +97,42 @@ class SettingsSwitchRow extends StatelessWidget {
     );
   }
 }
+
+/// Rounded, bordered group of rows separated by thin dividers.
+class SettingsSection extends StatelessWidget {
+  final String? title;
+  final List<Widget> children;
+
+  const SettingsSection({super.key, this.title, required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+    final items = <Widget>[];
+    for (var i = 0; i < children.length; i++) {
+      items.add(children[i]);
+      if (i != children.length - 1) {
+        items.add(Divider(height: 1, thickness: 1, color: c.border));
+      }
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (title != null)
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 8),
+            child: Text(title!, style: NotionText.section),
+          ),
+        Container(
+          decoration: BoxDecoration(
+            color: c.surface,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: c.border),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(children: items),
+        ),
+      ],
+    );
+  }
+}
