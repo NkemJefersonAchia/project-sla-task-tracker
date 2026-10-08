@@ -106,130 +106,136 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     return Scaffold(
       backgroundColor: c.canvas,
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.screenPadding,
-          AppSpacing.lg,
-          AppSpacing.screenPadding,
-          AppSpacing.xxl,
-        ),
-        children: [
-          Text('Profile', style: AppTypography.pageTitle),
-          const SizedBox(height: AppSpacing.xl),
-          AppCard(
-            child: Column(
-              children: [
-                MemberAvatar(member: member, size: 64),
-                const SizedBox(height: AppSpacing.md),
-                Text(
-                  member?.name ?? 'Not signed in',
-                  style: AppTypography.sectionTitle.copyWith(
-                    color: c.textPrimary,
-                    fontSize: 18,
-                  ),
-                ),
-                Text(
-                  member?.role ?? '',
-                  style: AppTypography.caption.copyWith(color: c.textSecondary),
-                ),
-                if (member != null) ...[
-                  const SizedBox(height: 2),
+      // Without this the page title paints under the status bar - the
+      // Tasks and Team tabs already wrap their bodies the same way.
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.screenPadding,
+            AppSpacing.lg,
+            AppSpacing.screenPadding,
+            AppSpacing.xxl,
+          ),
+          children: [
+            Text('Profile', style: AppTypography.pageTitle),
+            const SizedBox(height: AppSpacing.xl),
+            AppCard(
+              child: Column(
+                children: [
+                  MemberAvatar(member: member, size: 64),
+                  const SizedBox(height: AppSpacing.md),
                   Text(
-                    member.email,
-                    style: AppTypography.caption.copyWith(
-                      color: c.textTertiary,
+                    member?.name ?? 'Not signed in',
+                    style: AppTypography.sectionTitle.copyWith(
+                      color: c.textPrimary,
+                      fontSize: 18,
                     ),
                   ),
+                  Text(
+                    member?.role ?? '',
+                    style: AppTypography.caption.copyWith(
+                      color: c.textSecondary,
+                    ),
+                  ),
+                  if (member != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      member.email,
+                      style: AppTypography.caption.copyWith(
+                        color: c.textTertiary,
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-          const SizedBox(height: AppSpacing.xl),
+            const SizedBox(height: AppSpacing.xl),
 
-          SectionHeader(title: 'My workload'),
-          AppCard(
-            child: Row(
-              children: [
-                _MiniStat(
-                  value: openCount,
-                  label: 'Open',
-                  color: c.textPrimary,
-                ),
-                _Separator(color: c.border),
-                _MiniStat(
-                  value: counts[SlaStatus.atRisk] ?? 0,
-                  label: 'At risk',
-                  color: StatusColors.forSla(
-                    context,
-                    SlaStatus.atRisk,
-                  ).foreground,
-                ),
-                _Separator(color: c.border),
-                _MiniStat(
-                  value: counts[SlaStatus.overdue] ?? 0,
-                  label: 'Overdue',
-                  color: StatusColors.forSla(
-                    context,
-                    SlaStatus.overdue,
-                  ).foreground,
-                ),
-                _Separator(color: c.border),
-                _MiniStat(
-                  value: counts[SlaStatus.completed] ?? 0,
-                  label: 'Done',
-                  color: StatusColors.forSla(
-                    context,
-                    SlaStatus.completed,
-                  ).foreground,
-                ),
-              ],
+            SectionHeader(title: 'My workload'),
+            AppCard(
+              child: Row(
+                children: [
+                  _MiniStat(
+                    value: openCount,
+                    label: 'Open',
+                    color: c.textPrimary,
+                  ),
+                  _Separator(color: c.border),
+                  _MiniStat(
+                    value: counts[SlaStatus.atRisk] ?? 0,
+                    label: 'At risk',
+                    color: StatusColors.forSla(
+                      context,
+                      SlaStatus.atRisk,
+                    ).foreground,
+                  ),
+                  _Separator(color: c.border),
+                  _MiniStat(
+                    value: counts[SlaStatus.overdue] ?? 0,
+                    label: 'Overdue',
+                    color: StatusColors.forSla(
+                      context,
+                      SlaStatus.overdue,
+                    ).foreground,
+                  ),
+                  _Separator(color: c.border),
+                  _MiniStat(
+                    value: counts[SlaStatus.completed] ?? 0,
+                    label: 'Done',
+                    color: StatusColors.forSla(
+                      context,
+                      SlaStatus.completed,
+                    ).foreground,
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: AppSpacing.xl),
+            const SizedBox(height: AppSpacing.xl),
 
-          SectionHeader(title: 'Settings'),
-          AppCard(
-            padding: EdgeInsets.zero,
-            child: Column(
-              children: [
-                SettingsRow(
-                  icon: Icons.insights_outlined,
-                  label: 'Task statistics',
-                  // The statistics screen was removed from main during the
-                  // screen reset and nobody picked it up. The row stays so
-                  // the intent is visible, disabled until someone builds it.
-                  onTap: null,
-                  trailingNote: 'Not built yet',
-                ),
-                SettingsRow(
-                  icon: Icons.badge_outlined,
-                  label: 'Edit profile',
-                  onTap: _openEditProfile,
-                ),
-                SettingsRow(
-                  icon: Icons.contrast_outlined,
-                  label: 'App settings',
-                  onTap: _openAppSettings,
-                ),
-                SettingsRow(
-                  icon: Icons.info_outline_rounded,
-                  label: 'About this app',
-                  onTap: _openAbout,
-                  isLast: true,
-                ),
-              ],
+            SectionHeader(title: 'Settings'),
+            AppCard(
+              padding: EdgeInsets.zero,
+              child: Column(
+                children: [
+                  SettingsRow(
+                    icon: Icons.insights_outlined,
+                    label: 'Task statistics',
+                    // The statistics screen was removed from main during the
+                    // screen reset and nobody picked it up. The row stays so
+                    // the intent is visible, disabled until someone builds it.
+                    onTap: null,
+                    trailingNote: 'Not built yet',
+                  ),
+                  SettingsRow(
+                    icon: Icons.badge_outlined,
+                    label: 'Edit profile',
+                    onTap: _openEditProfile,
+                  ),
+                  SettingsRow(
+                    icon: Icons.contrast_outlined,
+                    label: 'App settings',
+                    onTap: _openAppSettings,
+                  ),
+                  SettingsRow(
+                    icon: Icons.info_outline_rounded,
+                    label: 'About this app',
+                    onTap: _openAbout,
+                    isLast: true,
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          const SizedBox(height: AppSpacing.xl),
+            const SizedBox(height: AppSpacing.lg),
+            const SizedBox(height: AppSpacing.xl),
 
-          SecondaryButton(
-            label: 'Sign out',
-            icon: Icons.logout_rounded,
-            destructive: true,
-            onPressed: _signOut,
-          ),
-        ],
+            SecondaryButton(
+              label: 'Sign out',
+              icon: Icons.logout_rounded,
+              destructive: true,
+              onPressed: _signOut,
+            ),
+          ],
+        ),
       ),
     );
   }
