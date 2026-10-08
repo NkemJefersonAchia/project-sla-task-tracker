@@ -143,9 +143,9 @@ class _Bar extends StatelessWidget {
     );
 
     final fraction = tallest == 0 ? 0.0 : count / tallest;
-    // A floor so a day with one task is still visibly a bar rather than a
-    // smudge against the axis.
-    final height = count == 0 ? 2.0 : 10 + (fraction * 72);
+    // Capped so the bar plus its count label fits the 92px plot area. The
+    // earlier 72px ceiling overflowed by 4px once the label was added.
+    final height = count == 0 ? 2.0 : 8 + (fraction * 62);
 
     final label = isOverdueColumn
         ? '$count overdue'
