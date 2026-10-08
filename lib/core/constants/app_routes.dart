@@ -21,6 +21,10 @@ abstract final class AppRoutes {
   static const String login = '/login';
   static const String signUp = '/sign-up';
 
+  /// Add or edit a team member. Takes the member id as a String, or null to
+  /// create a new one.
+  static const String memberForm = '/member/form';
+
   /// One task in full. Takes a [TaskDetailArgs].
   static const String taskDetail = '/task/detail';
 

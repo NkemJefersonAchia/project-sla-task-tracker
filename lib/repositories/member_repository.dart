@@ -114,9 +114,16 @@ class MemberRepository {
     return member.passwordHash == _hash(member.id, password) ? member : null;
   }
 
-  // TODO(team): delete(String id) - removing a member must also decide what
-  // happens to the tasks they own (unassign them, or block the delete).
-  // Owned by the Team Members work stream (see the README).
+  /// Removes a member from the roster.
+  ///
+  /// This deliberately does nothing about the tasks they owned - that is the
+  /// caller's decision, and the Team screen makes it explicitly by calling
+  /// `TaskRepository.unassignAll` first. Keeping the two separate means this
+  /// repository never reaches across into the other one's data.
+  Future<void> delete(String id) async {
+    _members.removeWhere((member) => member.id == id);
+    await _persist();
+  }
 
   String newId() => 'member_${DateTime.now().microsecondsSinceEpoch}';
 

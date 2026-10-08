@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../screens/auth/login_screen.dart';
 import '../../screens/auth/sign_up_screen.dart';
 import '../../screens/home_shell.dart';
+import '../../screens/team/member_form_screen.dart';
 import '../../screens/tasks/task_detail_screen.dart';
 import '../../screens/tasks/task_form_screen.dart';
 import '../constants/app_routes.dart';
@@ -31,6 +32,12 @@ abstract final class AppRouter {
 
       case AppRoutes.signUp:
         return _page<Object?>(const SignUpScreen(), settings);
+
+      case AppRoutes.memberForm:
+        // The id arrives as a bare String? - null means "create".
+        final memberId = settings.arguments as String?;
+        // Pops `true` when the member was saved.
+        return _page<bool>(MemberFormScreen(memberId: memberId), settings);
 
       case AppRoutes.taskDetail:
         final args = _requireArgs<TaskDetailArgs>(settings);

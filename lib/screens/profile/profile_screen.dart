@@ -90,7 +90,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     // Clear the whole navigation stack: after signing out there must be no
     // back route into the dashboard.
     Navigator.of(context)
-        .pushNamedAndRemoveUntil(AppRoutes.signIn, (route) => false);
+        .pushNamedAndRemoveUntil(AppRoutes.login, (route) => false);
   }
 
   @override
@@ -195,8 +195,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 SettingsRow(
                   icon: Icons.insights_outlined,
                   label: 'Task statistics',
-                  onTap: () =>
-                      Navigator.of(context).pushNamed(AppRoutes.statistics),
+                  // The statistics screen was removed from main during the
+                  // screen reset and nobody picked it up. The row stays so
+                  // the intent is visible, disabled until someone builds it.
+                  onTap: null,
+                  trailingNote: 'Not built yet',
                 ),
                 SettingsRow(
                   icon: Icons.badge_outlined,

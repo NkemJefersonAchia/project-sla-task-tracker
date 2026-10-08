@@ -81,6 +81,26 @@ class TaskRepository {
     return updated;
   }
 
+  /// Clears the assignee on every task owned by [memberId].
+  ///
+  /// This is the team's answer to "what happens to the work when a member is
+  /// removed": the tasks survive and become unassigned, rather than the
+  /// delete being refused or the tasks disappearing with the person. The UI
+  /// already renders an empty assignee as "Unassigned".
+  ///
+  /// Writes once at the end rather than per task, so a member holding ten
+  /// tasks is one disk write and cannot half-apply.
+  Future<void> unassignAll(String memberId) async {
+    var touched = false;
+    for (var i = 0; i < _tasks.length; i++) {
+      if (_tasks[i].assigneeId == memberId) {
+        _tasks[i] = _tasks[i].copyWith(assigneeId: '', updatedAt: DateTime.now());
+        touched = true;
+      }
+    }
+    if (touched) await _persist();
+  }
+
   Future<void> delete(String id) async {
     _tasks.removeWhere((task) => task.id == id);
     await _persist();
