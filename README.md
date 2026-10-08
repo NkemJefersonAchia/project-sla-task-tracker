@@ -54,12 +54,28 @@ don't rewrite it.
 |------|--------|--------|
 | Welcome / sign-in | `feature/welcome-login` | `lib/screens/welcome/` *(create it)* |
 | Home | `feature/home-tab` | `lib/screens/home/` |
-| Tasks | `feature/tasks-tab` | `lib/screens/tasks/` |
+| Tasks | `feature/tasks-tab` | `lib/screens/tasks/` — **built** |
 | Team | `feature/team-tab` | `lib/screens/team/` |
 | Profile | `feature/profile-tab` | `lib/screens/profile/` |
 
 Each screen file starts with a doc comment describing exactly what to build.
 The full brief lives in the handover document.
+
+### Tasks tab — done
+
+The list, the detail screen and the create/edit form are finished:
+
+- Rows showing the title, owner, deadline and SLA badge, ordered most urgent
+  first, with a checkbox to complete a task without opening it.
+- Search across title, category and description, plus SLA filter chips
+  carrying live counts.
+- A detail screen with the task's properties, an editable status, notes, and
+  the SLA verdict with the reason it was reached.
+- A create/edit form with validation on every field, a date picker bounded to
+  the same window the validator enforces, and a guard against discarding
+  unsaved edits.
+
+Covered by `test/tasks_screen_test.dart`.
 
 ---
 
