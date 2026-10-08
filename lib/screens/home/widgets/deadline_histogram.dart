@@ -77,13 +77,28 @@ class DeadlineHistogram extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              for (var i = 0; i < buckets.length; i++)
+              Expanded(
+                child: _Bar(
+                  count: buckets[0],
+                  tallest: tallest,
+                  isOverdueColumn: true,
+                  date: null,
+                ),
+              ),
+              // A rule between what is already late and what is still ahead.
+              // Without it the overdue column reads as just another day, and
+              // it is the one column that is not a day at all.
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 5),
+                child: Container(height: 70, width: 1, color: c.border),
+              ),
+              for (var i = 1; i < buckets.length; i++)
                 Expanded(
                   child: _Bar(
                     count: buckets[i],
                     tallest: tallest,
-                    isOverdueColumn: i == 0,
-                    date: i == 0 ? null : today.add(Duration(days: i - 1)),
+                    isOverdueColumn: false,
+                    date: today.add(Duration(days: i - 1)),
                   ),
                 ),
             ],
@@ -94,21 +109,19 @@ class DeadlineHistogram extends StatelessWidget {
         // would be more ink than the data itself.
         Container(height: 1, color: c.border),
         const SizedBox(height: 6),
+        // Two labels, not three. 'Today' used to sit here as well, but with
+        // fifteen columns across a phone it could never line up with the one
+        // it named - and a label pointing at the wrong column is worse than
+        // no label. The divider above marks where today begins.
         Row(
           children: [
-            Expanded(
-              child: Text(
-                'Overdue',
-                style: AppTypography.badge.copyWith(color: c.textTertiary),
-              ),
-            ),
             Text(
-              'Today',
+              'Overdue',
               style: AppTypography.badge.copyWith(color: c.textTertiary),
             ),
             const Spacer(),
             Text(
-              'In $days days',
+              'Today to +$days days',
               style: AppTypography.badge.copyWith(color: c.textTertiary),
             ),
           ],
