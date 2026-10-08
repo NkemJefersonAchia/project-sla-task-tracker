@@ -53,13 +53,28 @@ don't rewrite it.
 | Area | Branch | Folder |
 |------|--------|--------|
 | Welcome / sign-in | `feature/welcome-login` | `lib/screens/welcome/` *(create it)* |
-| Home | `feature/home-tab` | `lib/screens/home/` |
+| Home | `feature/home-tab` | `lib/screens/home/` — **built** |
 | Tasks | `feature/tasks-tab` | `lib/screens/tasks/` — **built** |
 | Team | `feature/team-tab` | `lib/screens/team/` |
 | Profile | `feature/profile-tab` | `lib/screens/profile/` |
 
 Each screen file starts with a doc comment describing exactly what to build.
 The full brief lives in the handover document.
+
+### Home tab — done
+
+The dashboard: greeting, four SLA counters, two charts and the work that
+needs attention.
+
+- Counters derived from `SlaService.summarise`, each one a shortcut into the
+  Tasks tab with that filter applied.
+- **SLA ring chart** — a thin arc painted with `CustomPainter`, total in the
+  middle, legend carrying the exact numbers. No charting package.
+- **Deadline histogram** — unfinished work across the next 14 days, with
+  everything already overdue collected into a separate first column.
+- Needs-attention list, capped at three rows, reusing `TaskRow`.
+
+Covered by `test/home_screen_test.dart`.
 
 ### Tasks tab — done
 
