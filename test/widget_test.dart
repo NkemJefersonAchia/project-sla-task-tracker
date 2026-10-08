@@ -1,30 +1,31 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:project_sla_task_tracker/main.dart';
+import 'package:project_sla_task_tracker/app.dart';
+import 'package:project_sla_task_tracker/core/theme/theme_controller.dart';
+import 'package:project_sla_task_tracker/repositories/member_repository.dart';
+import 'package:project_sla_task_tracker/repositories/session_repository.dart';
+import 'package:project_sla_task_tracker/repositories/task_repository.dart';
+import 'package:project_sla_task_tracker/services/storage_service.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  setUp(() async {
+    // Fake, empty device storage so the test never touches real data.
+    SharedPreferences.setMockInitialValues({});
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Same start-up order as main.dart.
+    await StorageService.instance.init();
+    await ThemeController.instance.load();
+    await MemberRepository.instance.load();
+    await TaskRepository.instance.load();
+    await SessionRepository.instance.load();
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+  testWidgets('opens on the login screen when signed out', (tester) async {
+    await tester.pumpWidget(const TaskTrackerApp());
+    await tester.pumpAndSettle();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('Plan. Track. Deliver Together.'), findsOneWidget);
+    expect(find.text('Sign In'), findsOneWidget);
   });
 }
