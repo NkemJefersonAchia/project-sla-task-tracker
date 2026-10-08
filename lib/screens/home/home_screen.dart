@@ -12,6 +12,7 @@ import '../../services/sla_service.dart';
 import '../../widgets/common/app_card.dart';
 import '../../widgets/common/member_avatar.dart';
 import '../../widgets/common/section_header.dart';
+import 'widgets/deadline_histogram.dart';
 import 'widgets/metric_tile.dart';
 import 'widgets/sla_ring_chart.dart';
 
@@ -60,6 +61,9 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: AppSpacing.xl),
             SectionHeader(title: 'Project health'),
             AppCard(child: SlaRingChart(counts: counts)),
+            const SizedBox(height: AppSpacing.xl),
+            SectionHeader(title: 'The next two weeks'),
+            AppCard(child: DeadlineHistogram(tasks: tasks)),
           ],
         ),
       ),
