@@ -7,6 +7,7 @@ import '../../core/theme/app_typography.dart';
 import '../../core/theme/status_colors.dart';
 import '../../models/sla_status.dart';
 import '../../models/task.dart';
+import '../../repositories/member_repository.dart';
 import '../../repositories/session_repository.dart';
 import '../../repositories/task_repository.dart';
 import '../../services/sla_service.dart';
@@ -15,7 +16,9 @@ import '../../widgets/common/app_card.dart';
 import '../../widgets/common/app_feedback.dart';
 import '../../widgets/common/member_avatar.dart';
 import '../../widgets/common/section_header.dart';
-import '../../widgets/common/unbuilt_feature_notice.dart';
+import 'about_screen.dart';
+import 'app_settings_screen.dart';
+import 'edit_profile_screen.dart';
 import 'widgets/settings_row.dart';
 
 /// The signed-in member's own page: who they are, what they owe, and the way
@@ -36,11 +39,46 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  Future<void> _openEditProfile() async {
+    final member = SessionRepository.instance.currentUser;
+    if (member == null) return;
+
+    final result = await Navigator.of(context).push<Map<String, String>>(
+      MaterialPageRoute(
+        builder: (_) => EditProfileScreen(
+          name: member.name,
+          role: member.role,
+          email: member.email,
+        ),
+      ),
+    );
+    if (!mounted || result == null) return;
+
+    await MemberRepository.instance.save(
+      member.copyWith(name: result['name'], role: result['role']),
+    );
+    if (mounted) {
+      widget.onDataChanged();
+      setState(() {});
+    }
+  }
+
+  void _openAppSettings() {
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const AppSettingsScreen()));
+  }
+
+  void _openAbout() {
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const AboutScreen()));
+  }
+
   Future<void> _signOut() async {
     final confirmed = await AppFeedback.confirm(
       context,
       title: 'Sign out?',
-      message: 'Your tasks stay on this device. You will need to pick your '
+      message:
+          'Your tasks stay on this device. You will need to pick your '
           'name again to come back in.',
       confirmLabel: 'Sign out',
     );
@@ -51,10 +89,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     // Clear the whole navigation stack: after signing out there must be no
     // back route into the dashboard.
-    Navigator.of(context).pushNamedAndRemoveUntil(
-      AppRoutes.signIn,
-      (route) => false,
-    );
+    Navigator.of(context)
+        .pushNamedAndRemoveUntil(AppRoutes.signIn, (route) => false);
   }
 
   @override
@@ -66,8 +102,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ? <Task>[]
         : TaskRepository.instance.byAssignee(member.id);
     final counts = SlaService.summarise(myTasks);
-    final openCount =
-        myTasks.where((task) => !task.status.isComplete).length;
+    final openCount = myTasks.where((task) => !task.status.isComplete).length;
 
     return Scaffold(
       backgroundColor: c.canvas,
@@ -95,9 +130,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 Text(
                   member?.role ?? '',
-                  style: AppTypography.caption.copyWith(
-                    color: c.textSecondary,
-                  ),
+                  style: AppTypography.caption.copyWith(color: c.textSecondary),
                 ),
                 if (member != null) ...[
                   const SizedBox(height: 2),
@@ -126,22 +159,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 _MiniStat(
                   value: counts[SlaStatus.atRisk] ?? 0,
                   label: 'At risk',
-                  color: StatusColors.forSla(context, SlaStatus.atRisk)
-                      .foreground,
+                  color: StatusColors.forSla(
+                    context,
+                    SlaStatus.atRisk,
+                  ).foreground,
                 ),
                 _Separator(color: c.border),
                 _MiniStat(
                   value: counts[SlaStatus.overdue] ?? 0,
                   label: 'Overdue',
-                  color: StatusColors.forSla(context, SlaStatus.overdue)
-                      .foreground,
+                  color: StatusColors.forSla(
+                    context,
+                    SlaStatus.overdue,
+                  ).foreground,
                 ),
                 _Separator(color: c.border),
                 _MiniStat(
                   value: counts[SlaStatus.completed] ?? 0,
                   label: 'Done',
-                  color: StatusColors.forSla(context, SlaStatus.completed)
-                      .foreground,
+                  color: StatusColors.forSla(
+                    context,
+                    SlaStatus.completed,
+                  ).foreground,
                 ),
               ],
             ),
@@ -162,41 +201,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 SettingsRow(
                   icon: Icons.badge_outlined,
                   label: 'Edit profile',
-                  // TODO(team): open a form that edits the signed-in member's
-                  // name, role and accent colour, then calls
-                  // MemberRepository.save(). Work stream C.
-                  onTap: null,
-                  trailingNote: 'Not built yet',
+                  onTap: _openEditProfile,
                 ),
                 SettingsRow(
                   icon: Icons.contrast_outlined,
-                  label: 'Appearance',
-                  // TODO(team): a light / dark / system selector wired to
-                  // ThemeController.instance.setMode(). The controller and
-                  // its persistence are already finished - this row only
-                  // needs the UI. Work stream C.
-                  onTap: null,
-                  trailingNote: 'Follows system',
+                  label: 'App settings',
+                  onTap: _openAppSettings,
                 ),
                 SettingsRow(
                   icon: Icons.info_outline_rounded,
                   label: 'About this app',
-                  // TODO(team): a short page describing the SLA rules and the
-                  // team. Work stream C.
-                  onTap: null,
-                  trailingNote: 'Not built yet',
+                  onTap: _openAbout,
                   isLast: true,
                 ),
               ],
             ),
           ),
           const SizedBox(height: AppSpacing.lg),
-          const UnbuiltFeatureNotice(
-            title: 'Three settings rows are still stubs',
-            message: 'Edit profile, Appearance and About are work stream C. '
-                'ThemeController already loads, saves and applies the theme '
-                'mode, so Appearance only needs a selector wired to it.',
-          ),
           const SizedBox(height: AppSpacing.xl),
 
           SecondaryButton(
@@ -256,10 +277,6 @@ class _Separator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 30,
-      width: 1,
-      color: color,
-    );
+    return Container(height: 30, width: 1, color: color);
   }
 }
