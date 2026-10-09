@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../screens/auth/login_screen.dart';
+import '../../screens/auth/sign_up_screen.dart';
 import '../../screens/home_shell.dart';
+import '../../screens/team/member_form_screen.dart';
+import '../../screens/tasks/task_detail_screen.dart';
+import '../../screens/tasks/task_form_screen.dart';
 import '../constants/app_routes.dart';
 
 /// Turns a route name into a screen.
@@ -22,12 +27,55 @@ abstract final class AppRouter {
       case AppRoutes.home:
         return _page<Object?>(const HomeShell(), settings);
 
+      case AppRoutes.login:
+        return _page<Object?>(const LoginScreen(), settings);
+
+      case AppRoutes.signUp:
+        return _page<Object?>(const SignUpScreen(), settings);
+
+      case AppRoutes.memberForm:
+        // The id arrives as a bare String? - null means "create".
+        final memberId = settings.arguments as String?;
+        // Pops `true` when the member was saved.
+        return _page<bool>(MemberFormScreen(memberId: memberId), settings);
+
+      case AppRoutes.taskDetail:
+        final args = _requireArgs<TaskDetailArgs>(settings);
+        // Pops `true` when the task was deleted, so the list behind re-reads.
+        return _page<bool>(TaskDetailScreen(taskId: args.taskId), settings);
+
+      case AppRoutes.taskForm:
+        final args = _requireArgs<TaskFormArgs>(settings);
+        // Pops `true` when a task was created or updated.
+        return _page<bool>(
+          TaskFormScreen(taskId: args.taskId),
+          settings,
+          // Arrives from the bottom with a close button rather than a back
+          // arrow: this is a job you either finish or abandon, not a place
+          // you browse to.
+          fullscreenDialog: true,
+        );
+
       default:
         return _page<Object?>(
           _UnknownRouteScreen(name: settings.name),
           settings,
         );
     }
+  }
+
+  /// Unpacks a route's arguments and fails loudly during development if a
+  /// screen was pushed without what it needs - better than a null blowing up
+  /// three widgets deeper with no mention of the route that caused it.
+  static T _requireArgs<T>(RouteSettings settings) {
+    final args = settings.arguments;
+    if (args is! T) {
+      throw ArgumentError(
+        'Route ${settings.name} requires arguments of type $T '
+        'but received ${args.runtimeType}.',
+      );
+    }
+    return args;
   }
 
   static MaterialPageRoute<T> _page<T>(
