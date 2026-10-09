@@ -29,12 +29,19 @@ class WorkloadBars extends StatelessWidget {
   /// (memberId, counts per SLA state), already ordered.
   final List<MapEntry<String, Map<SlaStatus, int>>> rows;
 
+  /// Completed work is deliberately absent. This chart answers "how much is
+  /// on each person's plate right now", and finished tasks are not on it -
+  /// including them made every bar the same length, because everybody had
+  /// the same lifetime total.
   static const List<SlaStatus> _order = [
     SlaStatus.overdue,
     SlaStatus.atRisk,
     SlaStatus.onTrack,
-    SlaStatus.completed,
   ];
+
+  /// Open tasks only, which is what the bars are scaled against.
+  static int openCount(Map<SlaStatus, int> counts) =>
+      _order.fold(0, (sum, s) => sum + (counts[s] ?? 0));
 
   @override
   Widget build(BuildContext context) {
@@ -47,11 +54,11 @@ class WorkloadBars extends StatelessWidget {
       );
     }
 
-    // Every row is scaled against the busiest person, so bar length compares
-    // across people instead of each row filling its own width.
+    // Every row is scaled against the busiest person's open load, so bar
+    // length compares across people instead of each row filling its width.
     final busiest = rows.fold<int>(0, (max, row) {
-      final total = row.value.values.fold(0, (s, v) => s + v);
-      return total > max ? total : max;
+      final open = openCount(row.value);
+      return open > max ? open : max;
     });
 
     return Column(
@@ -86,13 +93,12 @@ class _Row extends StatelessWidget {
     final c = AppColors.of(context);
     final member = MemberRepository.instance.byId(memberId);
 
-    final total = counts.values.fold(0, (s, v) => s + v);
-    final open = total - (counts[SlaStatus.completed] ?? 0);
+    final open = WorkloadBars.openCount(counts);
     final present =
         WorkloadBars._order.where((s) => (counts[s] ?? 0) > 0).toList();
 
     // The share of the row's width this person's bar should occupy.
-    final share = busiest == 0 ? 0.0 : total / busiest;
+    final share = busiest == 0 ? 0.0 : open / busiest;
 
     return Padding(
       padding: EdgeInsets.only(bottom: isLast ? 0 : AppSpacing.lg),
@@ -138,7 +144,7 @@ class _Row extends StatelessWidget {
                       borderRadius: BorderRadius.circular(AppRadius.sm),
                     ),
                   ),
-                  if (total > 0)
+                  if (open > 0)
                     ClipRRect(
                       borderRadius: BorderRadius.circular(AppRadius.sm),
                       child: SizedBox(
