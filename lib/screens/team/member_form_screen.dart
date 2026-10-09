@@ -5,6 +5,7 @@ import 'package:project_sla_task_tracker/core/theme/status_colors.dart'; // ASSU
 import 'package:project_sla_task_tracker/core/utils/validators.dart';
 import 'package:project_sla_task_tracker/models/team_member.dart';
 import 'package:project_sla_task_tracker/repositories/member_repository.dart';
+import 'package:project_sla_task_tracker/services/storage_service.dart';
 import 'package:project_sla_task_tracker/widgets/common/app_buttons.dart';
 import 'package:project_sla_task_tracker/widgets/common/app_feedback.dart';
 import 'package:project_sla_task_tracker/widgets/common/section_header.dart';
@@ -80,10 +81,13 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
       );
       _dirty = false;
       Navigator.pop(context, true);
-    } catch (e) {
+    } on StorageException {
       if (!mounted) return;
       setState(() => _saving = false);
-      AppFeedback.showError(context, 'Could not save. Please try again.');
+      AppFeedback.showError(
+        context,
+        'Could not save the member. Please try again.',
+      );
     }
   }
 
@@ -147,7 +151,7 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                   children: [
                     for (final key in StatusColors.memberColorKeys)
                       _Swatch(
-                        // ASSUMPTION: returns a pair with `.foreground`
+                        label: '$key accent colour',
                         color: StatusColors.forMemberColor(
                           context,
                           key,
@@ -182,11 +186,13 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
 }
 
 class _Swatch extends StatelessWidget {
+  final String label;
   final Color color;
   final Color borderColor;
   final bool selected;
   final VoidCallback onTap;
   const _Swatch({
+    required this.label,
     required this.color,
     required this.borderColor,
     required this.selected,
@@ -195,19 +201,25 @@ class _Swatch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
-          border: selected ? Border.all(color: borderColor, width: 2) : null,
+    return Semantics(
+      button: true,
+      label: label,
+      selected: selected,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            border: selected ? Border.all(color: borderColor, width: 2) : null,
+          ),
+          child: selected
+              ? const Icon(Icons.check, size: 18, color: Colors.white)
+              : null,
         ),
-        child: selected
-            ? const Icon(Icons.check, size: 18, color: Colors.white)
-            : null,
       ),
     );
   }
