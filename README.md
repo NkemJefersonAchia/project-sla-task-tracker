@@ -6,7 +6,7 @@ as **On Track**, **At Risk**, **Overdue** or **Completed** from its deadline,
 priority and workflow status, and the app says *why* it reached that verdict.
 
 Built for the Mobile Application Development group assignment (Trimester 6).
-Frontend only: all data lives on the device, with no backend.
+Frontend only: all data lives on the device, with no backend..
 
 ---
 
