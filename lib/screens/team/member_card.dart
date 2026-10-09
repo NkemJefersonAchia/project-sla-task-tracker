@@ -58,6 +58,7 @@ class MemberCard extends StatelessWidget {
             ),
           ),
           PopupMenuButton<MemberMenuAction>(
+            tooltip: 'Member options',
             icon: Icon(Icons.more_vert, color: c.textSecondary),
             onSelected: onMenu,
             itemBuilder: (_) => const [
