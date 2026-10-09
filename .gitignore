@@ -49,5 +49,6 @@ app.*.map.json
 # Local build outputs
 /build/
 devtools_options.yaml
-.gitignore
 branch_structure.json
+temp_auto_push.bat
+temp_interactive_push.bat

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_spacing.dart';
 import '../core/theme/app_typography.dart';
+import '../core/navigation/tasks_filter_bridge.dart';
 import 'home/home_screen.dart';
 import 'profile/profile_screen.dart';
 import 'tasks/tasks_screen.dart';
@@ -38,6 +39,34 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   int _currentIndex = 0;
 
+  /// Lets a tab say "the underlying data moved" so the other three re-read.
+  ///
+  /// The repositories are shared and in memory, so rebuilding the shell is
+  /// enough - editing your name on Profile updates the task rows on Tasks
+  /// without either screen knowing about the other.
+  @override
+  void initState() {
+    super.initState();
+    // The dashboard posts a filter request to the bridge; the shell's only
+    // job is to bring the Tasks tab forward. The Tasks tab applies the
+    // filter itself, so neither screen has to know the other exists.
+    TasksFilterBridge.requests.addListener(_showTasksTab);
+  }
+
+  @override
+  void dispose() {
+    TasksFilterBridge.requests.removeListener(_showTasksTab);
+    super.dispose();
+  }
+
+  void _showTasksTab() {
+    if (mounted) setState(() => _currentIndex = 1);
+  }
+
+  void _handleDataChanged() {
+    if (mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     const destinations = <_Destination>[
@@ -68,11 +97,11 @@ class _HomeShellState extends State<HomeShell> {
         index: _currentIndex,
         // Replace your own line here with your real screen, and leave the
         // other three alone.
-        children: const [
-          HomeScreen(),
-          TasksScreen(),
-          TeamScreen(),
-          ProfileScreen(),
+        children: [
+          const HomeScreen(),
+          const TasksScreen(),
+          const TeamScreen(),
+          ProfileScreen(onDataChanged: _handleDataChanged),
         ],
       ),
       bottomNavigationBar: _BottomBar(

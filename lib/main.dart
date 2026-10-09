@@ -13,10 +13,6 @@ import 'services/storage_service.dart';
 /// frame. That is a deliberate trade: a few milliseconds of start-up time buys
 /// screens that can read their data synchronously, so no tab has to render a
 /// spinner or flash an empty list on the way in.
-///
-/// What that means for you: inside your `build` method,
-/// `TaskRepository.instance.all` is just there. No `FutureBuilder`, no
-/// `async`. Read it straight.
 Future<void> main() async {
   // Required before touching any plugin - SharedPreferences, here - ahead of
   // runApp.
@@ -31,8 +27,6 @@ Future<void> main() async {
     await MemberRepository.instance.load();
     await TaskRepository.instance.load();
     await SessionRepository.instance.load();
-
-    await _signInDefaultUserUntilWelcomeScreenExists();
   } catch (error) {
     // If storage cannot be opened there is no app to show, so fail with a
     // readable screen rather than a blank one.
@@ -41,23 +35,6 @@ Future<void> main() async {
   }
 
   runApp(const TaskTrackerApp());
-}
-
-/// Temporary: picks the first team member so the app always has a current
-/// user.
-///
-/// The Profile tab needs to know who "you" are, and until the welcome screen
-/// exists there is nothing to ask. This keeps the other three tabs unblocked.
-///
-/// **Delete this whole function** when the welcome / sign-in screen lands -
-/// choosing the user is that screen's entire job.
-Future<void> _signInDefaultUserUntilWelcomeScreenExists() async {
-  if (SessionRepository.instance.isSignedIn) return;
-
-  final members = MemberRepository.instance.all;
-  if (members.isEmpty) return;
-
-  await SessionRepository.instance.signIn(members.first);
 }
 
 /// Last-resort screen shown when start-up itself fails.

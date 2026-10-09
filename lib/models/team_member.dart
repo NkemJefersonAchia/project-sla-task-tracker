@@ -9,6 +9,7 @@ class TeamMember {
     required this.role,
     required this.email,
     required this.colorKey,
+    this.passwordHash = '',
   });
 
   final String id;
@@ -20,6 +21,11 @@ class TeamMember {
   /// Storing the *name* rather than an int keeps the JSON readable and lets
   /// the same member render correctly in both light and dark theme.
   final String colorKey;
+
+  /// Hash of the member's password, set at sign up. Empty for members that
+  /// were never given a password (for example the seeded roster), which means
+  /// they cannot sign in with a password until one is set.
+  final String passwordHash;
 
   /// Up to two letters used by the avatar when there is no photo.
   String get initials {
@@ -41,6 +47,7 @@ class TeamMember {
     String? role,
     String? email,
     String? colorKey,
+    String? passwordHash,
   }) {
     return TeamMember(
       id: id,
@@ -48,10 +55,12 @@ class TeamMember {
       role: role ?? this.role,
       email: email ?? this.email,
       colorKey: colorKey ?? this.colorKey,
+      passwordHash: passwordHash ?? this.passwordHash,
     );
   }
 
   Map<String, dynamic> toJson() => {
+feature/team-regression-tests-20261009
     'id': id,
     'name': name,
     'role': role,
@@ -67,3 +76,22 @@ class TeamMember {
     colorKey: json['colorKey'] as String? ?? 'gray',
   );
 }
+
+        'id': id,
+        'name': name,
+        'role': role,
+        'email': email,
+        'colorKey': colorKey,
+        'passwordHash': passwordHash,
+      };
+
+  factory TeamMember.fromJson(Map<String, dynamic> json) => TeamMember(
+        id: json['id'] as String,
+        name: json['name'] as String? ?? 'Unknown',
+        role: json['role'] as String? ?? '',
+        email: json['email'] as String? ?? '',
+        colorKey: json['colorKey'] as String? ?? 'gray',
+        passwordHash: json['passwordHash'] as String? ?? '',
+      );
+}
+main
