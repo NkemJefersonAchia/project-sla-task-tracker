@@ -21,6 +21,9 @@ abstract final class AppRoutes {
   static const String login = '/login';
   static const String signUp = '/sign-up';
 
+  /// Project statistics: delivery rate, workload, upcoming load.
+  static const String statistics = '/statistics';
+
   /// Add or edit a team member. Takes the member id as a String, or null to
   /// create a new one.
   static const String memberForm = '/member/form';

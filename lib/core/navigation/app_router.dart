@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../screens/auth/login_screen.dart';
 import '../../screens/auth/sign_up_screen.dart';
 import '../../screens/home_shell.dart';
+import '../../screens/stats/task_statistics_screen.dart';
 import '../../screens/team/member_form_screen.dart';
 import '../../screens/tasks/task_detail_screen.dart';
 import '../../screens/tasks/task_form_screen.dart';
@@ -32,6 +33,9 @@ abstract final class AppRouter {
 
       case AppRoutes.signUp:
         return _page<Object?>(const SignUpScreen(), settings);
+
+      case AppRoutes.statistics:
+        return _page<Object?>(const TaskStatisticsScreen(), settings);
 
       case AppRoutes.memberForm:
         // The id arrives as a bare String? - null means "create".
