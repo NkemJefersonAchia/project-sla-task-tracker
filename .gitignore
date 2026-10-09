@@ -23,7 +23,6 @@ migrate_working_dir/
 
 # Flutter/Dart/Pub related
 **/doc/api/
-temp_auto_push.bat
 **/ios/Flutter/.last_build_id
 .dart_tool/
 .flutter-plugins-dependencies
@@ -49,6 +48,3 @@ app.*.map.json
 # Local build outputs
 /build/
 devtools_options.yaml
-branch_structure.json
-temp_auto_push.bat
-temp_interactive_push.bat
