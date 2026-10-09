@@ -40,18 +40,3 @@ What we took from that guidance and built:
 
 ---
 
-### Other areas
-
-<!-- Add further entries here as the team uses AI assistance elsewhere.
-     Each entry should state the tool, the purpose, the area, and what the
-     team actually did with the guidance. Do not credit AI with work the team
-     did itself, and do not credit the team with work it did not do. -->
-
----
-
-## Verification
-
-The team is responsible for understanding, testing and being able to explain
-everything in this repository, including anything produced with AI assistance.
-Before the demonstration, every member should be able to explain the code they
-present and modify it on request.
