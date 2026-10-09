@@ -10,17 +10,6 @@ Frontend only: all data lives on the device, with no backend.
 
 ---
 
-## Submission links
-
-| Item | Link |
-|------|------|
-| GitHub repository | https://github.com/NkemJefersonAchia/project-sla-task-tracker |
-| Demo video | `<paste demo video link>` |
-| Group contribution tracker | `<paste contribution tracker link>` |
-| AI usage declaration | [AI_USAGE.md](AI_USAGE.md) |
-
----
-
 ## Features
 
 **Authentication**
