@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:project_sla_task_tracker/core/navigation/app_router.dart';
 import 'package:project_sla_task_tracker/core/theme/app_theme.dart';
+import 'package:project_sla_task_tracker/core/navigation/tasks_filter_bridge.dart';
 import 'package:project_sla_task_tracker/models/sla_status.dart';
 import 'package:project_sla_task_tracker/models/task.dart';
 import 'package:project_sla_task_tracker/models/task_priority.dart';
@@ -49,11 +50,11 @@ void main() {
   }
 
   /// The tab on its own, inside just enough app for navigation to work.
-  Widget harness({void Function(SlaStatus?)? onOpenTasks}) {
+  Widget harness() {
     return MaterialApp(
       theme: AppTheme.light(),
       onGenerateRoute: AppRouter.onGenerateRoute,
-      home: HomeScreen(onOpenTasks: onOpenTasks ?? (_) {}),
+      home: const HomeScreen(),
     );
   }
 
@@ -81,21 +82,42 @@ void main() {
       expect(byLabel['On Track'], counts[SlaStatus.onTrack]);
     });
 
-    testWidgets('tapping one asks for that filter', (tester) async {
-      SlaStatus? requested;
-      var called = false;
+    testWidgets('tapping one posts a filter request to the bridge',
+        (tester) async {
+      TasksFilterRequest? seen;
+      void listener() => seen = TasksFilterBridge.requests.value;
+      TasksFilterBridge.requests.addListener(listener);
+      addTearDown(() => TasksFilterBridge.requests.removeListener(listener));
 
-      await tester.pumpWidget(harness(onOpenTasks: (s) {
-        requested = s;
-        called = true;
-      }));
+      await tester.pumpWidget(harness());
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Overdue').first);
       await tester.pumpAndSettle();
 
-      expect(called, isTrue);
-      expect(requested, SlaStatus.overdue);
+      expect(seen, isNotNull);
+      expect(seen!.slaFilter, SlaStatus.overdue);
+    });
+
+    testWidgets('tapping the same counter twice posts two requests',
+        (tester) async {
+      // The reason the bridge hands out a new object per tap: a
+      // ValueNotifier only fires when the value changes, so reusing one
+      // request would make the second tap silently do nothing.
+      var fired = 0;
+      void listener() => fired++;
+      TasksFilterBridge.requests.addListener(listener);
+      addTearDown(() => TasksFilterBridge.requests.removeListener(listener));
+
+      await tester.pumpWidget(harness());
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Overdue').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Overdue').first);
+      await tester.pumpAndSettle();
+
+      expect(fired, 2);
     });
   });
 

@@ -1,34 +1,31 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:project_sla_task_tracker/app.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:project_sla_task_tracker/app.dart';
 import 'package:project_sla_task_tracker/core/theme/theme_controller.dart';
 import 'package:project_sla_task_tracker/repositories/member_repository.dart';
 import 'package:project_sla_task_tracker/repositories/session_repository.dart';
 import 'package:project_sla_task_tracker/repositories/task_repository.dart';
 import 'package:project_sla_task_tracker/services/storage_service.dart';
 
-/// Smoke test: the app boots and renders without throwing.
-///
-/// This replaces the counter test the Flutter template ships with, which
-/// referenced a MyApp class this project has never had.
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
-
-  testWidgets('the app starts up and builds a frame', (tester) async {
+  setUp(() async {
+    // Fake, empty device storage so the test never touches real data.
     SharedPreferences.setMockInitialValues({});
-    TaskRepository.instance.resetForTesting();
-    MemberRepository.instance.resetForTesting();
 
+    // Same start-up order as main.dart.
     await StorageService.instance.init();
     await ThemeController.instance.load();
     await MemberRepository.instance.load();
     await TaskRepository.instance.load();
     await SessionRepository.instance.load();
+  });
 
+  testWidgets('opens on the login screen when signed out', (tester) async {
     await tester.pumpWidget(const TaskTrackerApp());
     await tester.pumpAndSettle();
 
-    expect(tester.takeException(), isNull);
+    expect(find.text('Plan. Track. Deliver Together.'), findsOneWidget);
+    expect(find.text('Sign In'), findsOneWidget);
   });
 }

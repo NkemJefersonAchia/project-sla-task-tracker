@@ -7,6 +7,7 @@ import '../../core/theme/status_colors.dart';
 import '../../core/utils/date_formatting.dart';
 import '../../models/sla_status.dart';
 import '../../core/constants/app_routes.dart';
+import '../../core/navigation/tasks_filter_bridge.dart';
 import '../../repositories/member_repository.dart';
 import '../../repositories/session_repository.dart';
 import '../../repositories/task_repository.dart';
@@ -25,10 +26,7 @@ import 'widgets/sla_ring_chart.dart';
 /// trouble, and if so where. It is the only screen that looks across every
 /// task at once, so it is a summary and a way in, not another task list.
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, required this.onOpenTasks});
-
-  /// Jumps to the Tasks tab, filtered to one SLA state. Null means "all".
-  final void Function(SlaStatus? status) onOpenTasks;
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -81,11 +79,7 @@ class _HomeScreenState extends State<HomeScreen> {
               avatar: MemberAvatar(member: me, size: 38),
             ),
             const SizedBox(height: AppSpacing.xl),
-            _MetricGrid(
-              total: tasks.length,
-              counts: counts,
-              onOpenTasks: widget.onOpenTasks,
-            ),
+            _MetricGrid(total: tasks.length, counts: counts),
             const SizedBox(height: AppSpacing.xl),
             SectionHeader(title: 'Project health'),
             AppCard(child: SlaRingChart(counts: counts)),
@@ -137,15 +131,10 @@ class _HomeScreenState extends State<HomeScreen> {
 /// alone cannot do that here, because a ListView gives its children unbounded
 /// vertical space and stretching to infinity throws.
 class _MetricGrid extends StatelessWidget {
-  const _MetricGrid({
-    required this.total,
-    required this.counts,
-    required this.onOpenTasks,
-  });
+  const _MetricGrid({required this.total, required this.counts});
 
   final int total;
   final Map<SlaStatus, int> counts;
-  final void Function(SlaStatus? status) onOpenTasks;
 
   @override
   Widget build(BuildContext context) {
@@ -157,7 +146,7 @@ class _MetricGrid extends StatelessWidget {
         label: 'Total tasks',
         icon: Icons.layers_outlined,
         pair: ColorPair(c.textPrimary, c.surfaceMuted),
-        onTap: () => onOpenTasks(null),
+        onTap: () => TasksFilterBridge.request(null),
       ),
       for (final status in [
         SlaStatus.onTrack,
@@ -169,7 +158,7 @@ class _MetricGrid extends StatelessWidget {
           label: status.label,
           icon: StatusColors.iconForSla(status),
           pair: StatusColors.forSla(context, status),
-          onTap: () => onOpenTasks(status),
+          onTap: () => TasksFilterBridge.request(status),
         ),
     ];
 

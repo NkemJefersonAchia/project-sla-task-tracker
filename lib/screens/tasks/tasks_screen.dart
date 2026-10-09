@@ -6,6 +6,7 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../repositories/member_repository.dart';
 import '../../repositories/task_repository.dart';
+import '../../core/navigation/tasks_filter_bridge.dart';
 import '../../models/sla_status.dart';
 import '../../models/task_status.dart';
 import '../../services/sla_service.dart';
@@ -31,18 +32,32 @@ class TasksScreen extends StatefulWidget {
   const TasksScreen({super.key});
 
   @override
-  State<TasksScreen> createState() => TasksScreenState();
+  State<TasksScreen> createState() => _TasksScreenState();
 }
 
-/// Public so the shell can reach it through a GlobalKey when the dashboard
-/// asks for a filtered view. Every other State in the app stays private.
-class TasksScreenState extends State<TasksScreen> {
+class _TasksScreenState extends State<TasksScreen> {
   final _searchController = TextEditingController();
 
   TaskQuery _query = const TaskQuery();
 
   @override
+  void initState() {
+    super.initState();
+    TasksFilterBridge.requests.addListener(_applyRequestedFilter);
+  }
+
+  /// A dashboard counter was tapped. The request carries the SLA state to
+  /// show; a fresh object is posted each time, so tapping the same counter
+  /// twice still arrives.
+  void _applyRequestedFilter() {
+    final request = TasksFilterBridge.requests.value;
+    if (request == null || !mounted) return;
+    _setSlaFilter(request.slaFilter);
+  }
+
+  @override
   void dispose() {
+    TasksFilterBridge.requests.removeListener(_applyRequestedFilter);
     // Controllers hold native resources. Not disposing one leaks it.
     _searchController.dispose();
     super.dispose();
@@ -104,9 +119,6 @@ class TasksScreenState extends State<TasksScreen> {
     );
     if (mounted) setState(() {});
   }
-
-  /// Called by the shell when a dashboard counter is tapped.
-  void applySlaFilter(SlaStatus? status) => _setSlaFilter(status);
 
   void _setSlaFilter(SlaStatus? status) {
     setState(() {
