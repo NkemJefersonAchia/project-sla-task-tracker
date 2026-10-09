@@ -1,30 +1,43 @@
 import 'package:flutter/material.dart';
 
+import '../../core/constants/app_routes.dart';
+import '../../core/navigation/tasks_filter_bridge.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/theme/status_colors.dart';
 import '../../core/utils/date_formatting.dart';
 import '../../models/sla_status.dart';
-import '../../core/constants/app_routes.dart';
-import '../../core/navigation/tasks_filter_bridge.dart';
-import '../../repositories/member_repository.dart';
+import '../../models/task.dart';
 import '../../repositories/session_repository.dart';
 import '../../repositories/task_repository.dart';
 import '../../services/sla_service.dart';
 import '../../widgets/common/app_card.dart';
 import '../../widgets/common/member_avatar.dart';
 import '../../widgets/common/section_header.dart';
-import 'widgets/deadline_histogram.dart';
-import 'widgets/metric_tile.dart';
-import '../tasks/widgets/task_row.dart';
-import 'widgets/sla_ring_chart.dart';
+import 'widgets/agenda_section.dart';
+import 'widgets/sla_health_strip.dart';
 
-/// The Home tab: the dashboard.
+/// The Home tab: an agenda, not a scoreboard.
 ///
-/// It answers one question the moment the app opens - is this project in
-/// trouble, and if so where. It is the only screen that looks across every
-/// task at once, so it is a summary and a way in, not another task list.
+/// ## The shape of this screen, and why
+///
+/// The obvious dashboard is a grid of counters over a donut chart. We built
+/// that first and then replaced it, for two reasons.
+///
+/// It did not answer the question. "3 at risk" tells you a number; it does
+/// not tell you which tasks, so every reading ended in a trip to the task
+/// list anyway. And four counter cards plus a ring filled a phone screen
+/// entirely, so the work itself started below the fold - a dashboard you have
+/// to scroll past to reach your tasks is in the way.
+///
+/// What replaced it:
+///  * One headline number - how much needs you - with the whole project's SLA
+///    split as a single band underneath. One card, one line of chart.
+///  * The work itself, grouped by when it is due: Overdue, Today, This week.
+///
+/// The counts still exist, in the group headings, where they label something
+/// you can act on rather than floating in a card of their own.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -33,10 +46,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  /// How many rows the attention list shows before deferring to the Tasks
-  /// tab. This is a summary; a fifth row would make it a second task list.
-  static const int _previewCount = 3;
-
   Future<void> _openTask(String taskId) async {
     await Navigator.of(context).pushNamed(
       AppRoutes.taskDetail,
@@ -51,16 +60,12 @@ class _HomeScreenState extends State<HomeScreen> {
     final c = AppColors.of(context);
     final me = SessionRepository.instance.currentUser;
 
-    // Read straight from the repository on every build. The counts are
-    // derived, never stored, so completing a task on another tab moves them
-    // without this screen being told anything.
+    // Read from the repository on every build. The buckets are derived, never
+    // stored, so completing a task anywhere moves them with no message
+    // passing between tabs.
     final tasks = TaskRepository.instance.all;
     final counts = SlaService.summarise(tasks);
-
-    // Overdue and at-risk work, soonest deadline first.
-    final needsAttention =
-        tasks.where((t) => SlaService.statusOf(t).needsAttention).toList()
-          ..sort((a, b) => a.dueDate.compareTo(b.dueDate));
+    final buckets = _AgendaBuckets.from(tasks);
 
     return Scaffold(
       backgroundColor: c.canvas,
@@ -79,43 +84,50 @@ class _HomeScreenState extends State<HomeScreen> {
               avatar: MemberAvatar(member: me, size: 38),
             ),
             const SizedBox(height: AppSpacing.xl),
-            _MetricGrid(total: tasks.length, counts: counts),
+
+            _HeadlineCard(
+              needsAttention: buckets.needsAttentionCount,
+              counts: counts,
+              onSegmentTap: TasksFilterBridge.request,
+            ),
             const SizedBox(height: AppSpacing.xl),
-            SectionHeader(title: 'Project health'),
-            AppCard(child: SlaRingChart(counts: counts)),
-            const SizedBox(height: AppSpacing.xl),
-            SectionHeader(title: 'The next two weeks'),
-            AppCard(child: DeadlineHistogram(tasks: tasks)),
-            const SizedBox(height: AppSpacing.xl),
-            SectionHeader(title: 'Needs attention (${needsAttention.length})'),
-            if (needsAttention.isEmpty)
-              AppCard(
-                child: Row(
-                  children: [
-                    Icon(Icons.verified_outlined, size: 18, color: c.green),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: Text(
-                        'Nothing is overdue or at risk. The whole board is on '
-                        'schedule.',
-                        style: AppTypography.caption.copyWith(
-                          color: c.textSecondary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            else
-              for (final task in needsAttention.take(_previewCount))
-                Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                  child: TaskRow(
-                    task: task,
-                    assignee: MemberRepository.instance.byId(task.assigneeId),
-                    onTap: () => _openTask(task.id),
-                  ),
-                ),
+
+            SectionHeader(
+              title: 'Your agenda',
+              action: SectionAction(
+                label: 'Statistics',
+                icon: Icons.arrow_forward_rounded,
+                onPressed: () =>
+                    Navigator.of(context).pushNamed(AppRoutes.statistics),
+              ),
+            ),
+
+            AgendaSection(
+              title: 'Overdue',
+              tasks: buckets.overdue,
+              accent: StatusColors.forSla(context, SlaStatus.overdue)
+                  .foreground,
+              onTaskTap: _openTask,
+            ),
+            AgendaSection(
+              title: 'Due today',
+              tasks: buckets.today,
+              accent: StatusColors.forSla(context, SlaStatus.atRisk)
+                  .foreground,
+              onTaskTap: _openTask,
+              // Worth saying out loud - an empty day is good news, and a
+              // silent gap would read as a rendering fault.
+              emptyNote: 'Nothing due today.',
+            ),
+            AgendaSection(
+              title: 'This week',
+              tasks: buckets.thisWeek,
+              accent: StatusColors.forSla(context, SlaStatus.onTrack)
+                  .foreground,
+              onTaskTap: _openTask,
+            ),
+
+            if (buckets.isEmpty) _AllClear(),
           ],
         ),
       ),
@@ -123,70 +135,137 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-/// The 2x2 block of counters.
+/// Splits unfinished work into the three buckets the agenda shows.
 ///
-/// Two plain Rows rather than a GridView, which would need its own scroll
-/// handling inside the page's ListView. Each row is wrapped in an
-/// IntrinsicHeight so its two tiles match height - `CrossAxisAlignment.stretch`
-/// alone cannot do that here, because a ListView gives its children unbounded
-/// vertical space and stretching to infinity throws.
-class _MetricGrid extends StatelessWidget {
-  const _MetricGrid({required this.total, required this.counts});
+/// Kept as a small value object rather than three filters inline, so the
+/// rules live in one place and the screen stays a layout.
+class _AgendaBuckets {
+  const _AgendaBuckets({
+    required this.overdue,
+    required this.today,
+    required this.thisWeek,
+  });
 
-  final int total;
-  final Map<SlaStatus, int> counts;
+  final List<Task> overdue;
+  final List<Task> today;
+  final List<Task> thisWeek;
 
-  @override
-  Widget build(BuildContext context) {
-    final c = AppColors.of(context);
+  int get needsAttentionCount => overdue.length + today.length;
 
-    final tiles = <Widget>[
-      MetricTile(
-        value: total,
-        label: 'Total tasks',
-        icon: Icons.layers_outlined,
-        pair: ColorPair(c.textPrimary, c.surfaceMuted),
-        onTap: () => TasksFilterBridge.request(null),
-      ),
-      for (final status in [
-        SlaStatus.onTrack,
-        SlaStatus.atRisk,
-        SlaStatus.overdue,
-      ])
-        MetricTile(
-          value: counts[status] ?? 0,
-          label: status.label,
-          icon: StatusColors.iconForSla(status),
-          pair: StatusColors.forSla(context, status),
-          onTap: () => TasksFilterBridge.request(status),
-        ),
-    ];
+  bool get isEmpty => overdue.isEmpty && today.isEmpty && thisWeek.isEmpty;
 
-    return Column(
-      children: [
-        _MetricRow(left: tiles[0], right: tiles[1]),
-        const SizedBox(height: AppSpacing.md),
-        _MetricRow(left: tiles[2], right: tiles[3]),
-      ],
+  factory _AgendaBuckets.from(List<Task> tasks, {DateTime? now}) {
+    final today = Task.dateOnly(now ?? DateTime.now());
+
+    final overdueList = <Task>[];
+    final todayList = <Task>[];
+    final weekList = <Task>[];
+
+    for (final task in tasks) {
+      // Finished work has no place on an agenda; it is history, and the
+      // statistics screen is where history belongs.
+      if (task.status.isComplete) continue;
+
+      final days = Task.dateOnly(task.dueDate).difference(today).inDays;
+      if (days < 0) {
+        overdueList.add(task);
+      } else if (days == 0) {
+        todayList.add(task);
+      } else if (days <= 7) {
+        weekList.add(task);
+      }
+      // Anything past a week is not on this week's agenda. The Tasks tab has
+      // the full list; this screen is deliberately the near horizon.
+    }
+
+    int byDueDate(Task a, Task b) => a.dueDate.compareTo(b.dueDate);
+    overdueList.sort(byDueDate);
+    todayList.sort(byDueDate);
+    weekList.sort(byDueDate);
+
+    return _AgendaBuckets(
+      overdue: overdueList,
+      today: todayList,
+      thisWeek: weekList,
     );
   }
 }
 
-class _MetricRow extends StatelessWidget {
-  const _MetricRow({required this.left, required this.right});
+/// The one prominent number on the screen, with the SLA band under it.
+///
+/// A single headline rather than four competing tiles: if everything is
+/// emphasised, nothing is. The other counts are still present in the band's
+/// labels, one size down, which is where they belong.
+class _HeadlineCard extends StatelessWidget {
+  const _HeadlineCard({
+    required this.needsAttention,
+    required this.counts,
+    required this.onSegmentTap,
+  });
 
-  final Widget left;
-  final Widget right;
+  final int needsAttention;
+  final Map<SlaStatus, int> counts;
+  final void Function(SlaStatus status) onSegmentTap;
 
   @override
   Widget build(BuildContext context) {
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+    final c = AppColors.of(context);
+    final clear = needsAttention == 0;
+
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(child: left),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                '$needsAttention',
+                style: AppTypography.pageTitle.copyWith(
+                  fontSize: 40,
+                  color: clear ? c.green : c.textPrimary,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Text(
+                  clear
+                      ? 'Nothing needs you today.'
+                      : needsAttention == 1
+                          ? 'task needs you today'
+                          : 'tasks need you today',
+                  style: AppTypography.body.copyWith(color: c.textSecondary),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          SlaHealthStrip(counts: counts, onSegmentTap: onSegmentTap),
+        ],
+      ),
+    );
+  }
+}
+
+/// Shown when there is genuinely nothing on the near horizon.
+class _AllClear extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpacing.lg),
+      child: Row(
+        children: [
+          Icon(Icons.wb_sunny_outlined, size: 18, color: c.green),
           const SizedBox(width: AppSpacing.md),
-          Expanded(child: right),
+          Expanded(
+            child: Text(
+              'No unfinished work due in the next seven days.',
+              style: AppTypography.caption.copyWith(color: c.textSecondary),
+            ),
+          ),
         ],
       ),
     );
@@ -194,10 +273,6 @@ class _MetricRow extends StatelessWidget {
 }
 
 /// "Good afternoon / Amara / Project Manager", with the avatar on the right.
-///
-/// The time-of-day greeting is the one piece of warmth on an otherwise
-/// factual screen, and it doubles as confirmation of who you are signed in
-/// as - which matters on a shared demo device.
 class _Greeting extends StatelessWidget {
   const _Greeting({
     required this.name,
