@@ -31,11 +31,15 @@ class TeamMember {
   String get initials {
     final parts = name.trim().split(RegExp(r'\s+'));
     if (parts.isEmpty || parts.first.isEmpty) return '?';
+    String firstCharacter(String word) =>
+        String.fromCharCodes(word.runes.take(1));
+
     if (parts.length == 1) {
       final word = parts.first;
-      return (word.length >= 2 ? word.substring(0, 2) : word).toUpperCase();
+      return String.fromCharCodes(word.runes.take(2)).toUpperCase();
     }
-    return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
+    return '${firstCharacter(parts.first)}${firstCharacter(parts.last)}'
+        .toUpperCase();
   }
 
   TeamMember copyWith({
@@ -56,6 +60,23 @@ class TeamMember {
   }
 
   Map<String, dynamic> toJson() => {
+feature/team-regression-tests-20261009
+    'id': id,
+    'name': name,
+    'role': role,
+    'email': email,
+    'colorKey': colorKey,
+  };
+
+  factory TeamMember.fromJson(Map<String, dynamic> json) => TeamMember(
+    id: json['id'] as String,
+    name: json['name'] as String? ?? 'Unknown',
+    role: json['role'] as String? ?? '',
+    email: json['email'] as String? ?? '',
+    colorKey: json['colorKey'] as String? ?? 'gray',
+  );
+}
+
         'id': id,
         'name': name,
         'role': role,
@@ -73,3 +94,4 @@ class TeamMember {
         passwordHash: json['passwordHash'] as String? ?? '',
       );
 }
+main

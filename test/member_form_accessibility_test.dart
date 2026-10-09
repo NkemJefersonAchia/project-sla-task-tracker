@@ -1,5 +1,6 @@
+import 'dart:ui' show Tristate;
+
 import 'package:flutter/material.dart';
-import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:project_sla_task_tracker/screens/team/member_form_screen.dart';
 
@@ -16,11 +17,17 @@ void main() {
 
     expect(blue, findsOneWidget);
     expect(green, findsOneWidget);
-    expect(tester.getSemantics(blue).hasFlag(SemanticsFlag.isButton), isTrue);
-    expect(tester.getSemantics(blue).hasFlag(SemanticsFlag.isSelected), isTrue);
     expect(
-      tester.getSemantics(green).hasFlag(SemanticsFlag.isSelected),
-      isFalse,
+      tester.getSemantics(blue).getSemanticsData().flagsCollection.isButton,
+      isTrue,
+    );
+    expect(
+      tester.getSemantics(blue).getSemanticsData().flagsCollection.isSelected,
+      Tristate.isTrue,
+    );
+    expect(
+      tester.getSemantics(green).getSemanticsData().flagsCollection.isSelected,
+      Tristate.isFalse,
     );
 
     await tester.ensureVisible(green);
@@ -28,8 +35,8 @@ void main() {
     await tester.pump();
 
     expect(
-      tester.getSemantics(green).hasFlag(SemanticsFlag.isSelected),
-      isTrue,
+      tester.getSemantics(green).getSemanticsData().flagsCollection.isSelected,
+      Tristate.isTrue,
     );
     semantics.dispose();
   });

@@ -32,6 +32,10 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
 
   bool get _isEdit => _existing != null;
 
+  void _markDirty() {
+    if (!_dirty) setState(() => _dirty = true);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -113,7 +117,6 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
           child: Form(
             key: _formKey,
             autovalidateMode: AutovalidateMode.onUserInteraction,
-            onChanged: () => _dirty = true,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -125,6 +128,7 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                   textCapitalization: TextCapitalization.words,
                   decoration: const InputDecoration(labelText: 'Full name'),
                   validator: Validators.personName,
+                  onChanged: (_) => _markDirty(),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 TextFormField(
@@ -135,6 +139,7 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                     hintText: 'e.g. Mobile Developer',
                   ),
                   validator: (v) => Validators.required(v, field: 'Role'),
+                  onChanged: (_) => _markDirty(),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 TextFormField(
@@ -142,6 +147,7 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                   keyboardType: TextInputType.emailAddress,
                   decoration: const InputDecoration(labelText: 'Email'),
                   validator: Validators.email,
+                  onChanged: (_) => _markDirty(),
                 ),
                 const SizedBox(height: AppSpacing.xl),
                 const SectionHeader(title: 'ACCENT COLOUR'),
