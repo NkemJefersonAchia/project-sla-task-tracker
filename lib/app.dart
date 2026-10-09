@@ -4,19 +4,12 @@ import 'core/constants/app_routes.dart';
 import 'core/navigation/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
+import 'repositories/session_repository.dart';
 
 /// The root widget.
 ///
 /// Its only jobs are to supply the theme, install the route table, and say
 /// which screen the app opens on. No real work happens here.
-///
-/// ## For whoever builds the welcome / sign-in screen
-///
-/// Right now the app opens straight onto the tabs. When your screen exists,
-/// this is where you decide between them: send a returning user to
-/// [AppRoutes.home] and everybody else to your screen. `SessionRepository`
-/// already remembers who signed in last and survives a restart, so that check
-/// is a plain synchronous read - you do not need a loading screen for it.
 class TaskTrackerApp extends StatelessWidget {
   const TaskTrackerApp({super.key});
 
@@ -36,7 +29,9 @@ class TaskTrackerApp extends StatelessWidget {
           darkTheme: AppTheme.dark(),
           themeMode: themeMode,
           onGenerateRoute: AppRouter.onGenerateRoute,
-          initialRoute: AppRoutes.home,
+          initialRoute: SessionRepository.instance.isSignedIn
+              ? AppRoutes.home
+              : AppRoutes.login,
         );
       },
     );

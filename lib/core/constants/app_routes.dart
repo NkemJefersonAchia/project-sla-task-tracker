@@ -17,6 +17,44 @@ abstract final class AppRoutes {
   /// The shell that holds the four bottom-navigation tabs.
   static const String home = '/';
 
-  // The welcome / sign-in route goes here when that screen exists.
-  // The task detail and task form routes go here too.
+  /// Sign-in and account creation.
+  static const String login = '/login';
+  static const String signUp = '/sign-up';
+
+  /// Project statistics: delivery rate, workload, upcoming load.
+  static const String statistics = '/statistics';
+
+  /// Add or edit a team member. Takes the member id as a String, or null to
+  /// create a new one.
+  static const String memberForm = '/member/form';
+
+  /// One task in full. Takes a [TaskDetailArgs].
+  static const String taskDetail = '/task/detail';
+
+  /// Create or edit a task. Takes a [TaskFormArgs]; a null id means create.
+  static const String taskForm = '/task/form';
+}
+
+/// Arguments for [AppRoutes.taskDetail].
+///
+/// Only the id travels between screens, never the whole Task. The detail
+/// screen re-reads the task from the repository on every build, so it cannot
+/// show a stale copy of something the form edited a moment ago.
+class TaskDetailArgs {
+  const TaskDetailArgs(this.taskId);
+
+  final String taskId;
+}
+
+/// Arguments for [AppRoutes.taskForm].
+class TaskFormArgs {
+  /// Opens the form empty, ready to create a task.
+  const TaskFormArgs.create() : taskId = null;
+
+  /// Opens the form pre-filled with the task to edit.
+  const TaskFormArgs.edit(this.taskId);
+
+  final String? taskId;
+
+  bool get isEditing => taskId != null;
 }
