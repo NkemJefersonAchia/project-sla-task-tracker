@@ -13,7 +13,7 @@ says what the assistance covered and what the team did with it.
 
 We sought AI assistance to help us navigate how to implement persistent local
 storage in our frontend-only application. The assistance was used to
-understand suitable browser-equivalent storage approaches on Flutter, structure
+understand suitable  storage approaches on Flutter, structure
 the persistence layer, handle data loading and saving, and consider persistence
 testing. The implementation was reviewed and integrated into the project by the
 team.
