@@ -116,4 +116,17 @@ void main() {
       expect(Validators.password('123456'), isNull);
     });
   });
+
+  group('personName', () {
+    test('rejects missing, blank, and one-character names', () {
+      expect(Validators.personName(null), isNotNull);
+      expect(Validators.personName('   '), isNotNull);
+      expect(Validators.personName('A'), isNotNull);
+    });
+
+    test('accepts names with at least two non-whitespace characters', () {
+      expect(Validators.personName('Al'), isNull);
+      expect(Validators.personName('  Alex Morgan  '), isNull);
+    });
+  });
 }
