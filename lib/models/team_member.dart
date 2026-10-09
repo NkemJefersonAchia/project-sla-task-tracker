@@ -60,23 +60,6 @@ class TeamMember {
   }
 
   Map<String, dynamic> toJson() => {
-feature/team-regression-tests-20261009
-    'id': id,
-    'name': name,
-    'role': role,
-    'email': email,
-    'colorKey': colorKey,
-  };
-
-  factory TeamMember.fromJson(Map<String, dynamic> json) => TeamMember(
-    id: json['id'] as String,
-    name: json['name'] as String? ?? 'Unknown',
-    role: json['role'] as String? ?? '',
-    email: json['email'] as String? ?? '',
-    colorKey: json['colorKey'] as String? ?? 'gray',
-  );
-}
-
         'id': id,
         'name': name,
         'role': role,
@@ -94,4 +77,3 @@ feature/team-regression-tests-20261009
         passwordHash: json['passwordHash'] as String? ?? '',
       );
 }
-main
