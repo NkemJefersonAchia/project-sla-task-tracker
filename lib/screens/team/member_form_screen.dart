@@ -151,7 +151,7 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                   children: [
                     for (final key in StatusColors.memberColorKeys)
                       _Swatch(
-                        // ASSUMPTION: returns a pair with `.foreground`
+                        label: '$key accent colour',
                         color: StatusColors.forMemberColor(
                           context,
                           key,
@@ -186,11 +186,13 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
 }
 
 class _Swatch extends StatelessWidget {
+  final String label;
   final Color color;
   final Color borderColor;
   final bool selected;
   final VoidCallback onTap;
   const _Swatch({
+    required this.label,
     required this.color,
     required this.borderColor,
     required this.selected,
@@ -199,19 +201,25 @@ class _Swatch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
-          border: selected ? Border.all(color: borderColor, width: 2) : null,
+    return Semantics(
+      button: true,
+      label: label,
+      selected: selected,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            border: selected ? Border.all(color: borderColor, width: 2) : null,
+          ),
+          child: selected
+              ? const Icon(Icons.check, size: 18, color: Colors.white)
+              : null,
         ),
-        child: selected
-            ? const Icon(Icons.check, size: 18, color: Colors.white)
-            : null,
       ),
     );
   }
