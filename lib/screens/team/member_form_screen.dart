@@ -5,6 +5,7 @@ import 'package:project_sla_task_tracker/core/theme/status_colors.dart'; // ASSU
 import 'package:project_sla_task_tracker/core/utils/validators.dart';
 import 'package:project_sla_task_tracker/models/team_member.dart';
 import 'package:project_sla_task_tracker/repositories/member_repository.dart';
+import 'package:project_sla_task_tracker/services/storage_service.dart';
 import 'package:project_sla_task_tracker/widgets/common/app_buttons.dart';
 import 'package:project_sla_task_tracker/widgets/common/app_feedback.dart';
 import 'package:project_sla_task_tracker/widgets/common/section_header.dart';
@@ -80,10 +81,13 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
       );
       _dirty = false;
       Navigator.pop(context, true);
-    } catch (e) {
+    } on StorageException {
       if (!mounted) return;
       setState(() => _saving = false);
-      AppFeedback.showError(context, 'Could not save. Please try again.');
+      AppFeedback.showError(
+        context,
+        'Could not save the member. Please try again.',
+      );
     }
   }
 
